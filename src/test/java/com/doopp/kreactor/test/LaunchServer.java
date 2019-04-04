@@ -41,8 +41,8 @@ public class LaunchServer {
         KReactorServer.create()
             .bind(host, port)
             .injector(injector)
-            .basePackages(TestHandle.class.getPackage().getName())
-            .addFilter("/", new Filter())
+            .handlePackages("com.doopp.kreactor.test.handle")
+            .addFilter("/", Filter.class)
             .launch();
     }
 

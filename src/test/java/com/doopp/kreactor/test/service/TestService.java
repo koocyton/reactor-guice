@@ -5,4 +5,6 @@ import reactor.core.publisher.Mono;
 public interface TestService {
 
     Mono<String> serviceTest();
+
+    void filterCallTest();
 }

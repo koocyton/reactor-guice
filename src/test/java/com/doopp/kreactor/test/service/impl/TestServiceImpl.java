@@ -21,4 +21,9 @@ public class TestServiceImpl implements TestService {
             .aggregate()
             .map(byteBuf -> byteBuf.toString(Charset.forName("UTF-8")));
     }
+
+    @Override
+    public void filterCallTest() {
+        System.out.println("filterCallTest");
+    }
 }

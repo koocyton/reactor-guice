@@ -61,7 +61,7 @@ public class KReactorServer {
         return this;
     }
 
-    public KReactorServer basePackages(String... basePackages) {
+    public KReactorServer handlePackages(String... basePackages) {
         Collections.addAll(this.handlePackages, basePackages);
         return this;
     }
@@ -71,8 +71,10 @@ public class KReactorServer {
         return this;
     }
 
-    public KReactorServer addFilter(String path, KReactorFilter filter) {
-        this.filters.put(path, filter);
+    public KReactorServer addFilter(String path, Class<? extends KReactorFilter> clazz) {
+        if (this.injector!=null) {
+            this.filters.put(path, this.injector.getInstance(clazz));
+        }
         return this;
     }
 
