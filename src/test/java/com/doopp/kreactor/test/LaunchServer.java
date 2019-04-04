@@ -81,7 +81,8 @@ public class LaunchServer {
 
     private Properties testProperties() throws IOException {
         Properties properties = new Properties();
-        properties.load(new FileInputStream("D:\\project\\reactor-guice\\reactor-guice\\application.properties"));
+        // properties.load(new FileInputStream("D:\\project\\reactor-guice\\reactor-guice\\application.properties"));
+        properties.load(new FileInputStream("/Developer/Project/reactor-guice/application.properties"));
         return properties;
     }
 }
@@ -89,10 +90,10 @@ public class LaunchServer {
 
 /*
 
-    mvn clean
+mvn clean
 
-    mvn package
+mvn package
 
-    mvn install:install-file -Dfile=./target/kreactor-1.0-SNAPSHOT.jar -DgroupId=com.doopp -DartifactId=reactor-guice -Dversion=0.0.3 -Dpackaging=jar
+mvn install:install-file -Dfile=./target/kreactor-1.0-SNAPSHOT.jar -DgroupId=com.doopp -DartifactId=reactor-guice -Dversion=0.0.3 -Dpackaging=jar
 
  */
