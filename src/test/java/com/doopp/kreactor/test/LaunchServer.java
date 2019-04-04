@@ -86,14 +86,3 @@ public class LaunchServer {
         return properties;
     }
 }
-
-
-/*
-
-mvn clean
-
-mvn package
-
-mvn install:install-file -Dfile=./target/kreactor-1.0-SNAPSHOT.jar -DgroupId=com.doopp -DartifactId=reactor-guice -Dversion=0.0.3 -Dpackaging=jar
-
- */
