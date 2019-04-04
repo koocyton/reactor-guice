@@ -5,14 +5,58 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.doopp</groupId>
-    <artifactId>kreactor</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <artifactId>reactor-guice</artifactId>
+    <version>0.0.3</version>
+    <description>Guice reactor-netty Components</description>
+    <name>reactor-guice</name>
+    <url>https://github.com/koocyton/reactor-guice</url>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <maven.compiler.encoding>UTF-8</maven.compiler.encoding>
+        <maven.compiler.source>1.7</maven.compiler.source>
+        <maven.compiler.target>1.7</maven.compiler.target>
     </properties>
+
+    <packaging>jar</packaging>
+
+    <licenses>
+        <license>
+            <name>MIT License</name>
+            <url>https://opensource.org/licenses/MIT</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <email>koocyton@gmail.com</email>
+            <name>Liu Yi</name>
+            <url>https://github.com/koocyton</url>
+            <id>koocyton</id>
+        </developer>
+    </developers>
+
+    <issueManagement>
+        <url>https://github.com/koocyton/reactor-guice/issues</url>
+        <system>GitHub Issues</system>
+    </issueManagement>
+    <scm>
+        <url>https://github.com/koocyton/reactor-guice</url>
+        <connection>scm:git:https://github.com/koocyton/reactor-guice.git</connection>
+    </scm>
+
+    <distributionManagement>
+        <snapshotRepository>
+            <id>sonatype</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        </snapshotRepository>
+        <repository>
+            <id>sonatype</id>
+            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+        </repository>
+    </distributionManagement>
 
     <dependencies>
 
@@ -93,21 +137,6 @@
 
 
     </dependencies>
-
-    <!--
-
-    mvn clean
-
-    mvn package
-
-    mvn install:install-file \
-    -Dfile=./target/kreactor-1.0-SNAPSHOT.jar \
-    -DgroupId=com.doopp \
-    -DartifactId=kreactor \
-    -Dversion=1.1-SNAPSHOT \
-    -Dpackaging=jar
-
-    //-->
 
     <build>
         <plugins>
