@@ -2,13 +2,8 @@
 
 Reactor-guice integrates the framework of Google Guice and Reactor-netty
 
-1. Create Local Maven
 
-```
-mvn install:install-file -Dfile=./target/reactor-guice-0.0.3.jar -DgroupId=com.doopp -DartifactId=reactor-guice -Dversion=0.0.3 -Dpackaging=jar
-```
-
-2. import reactor-guice
+### 1. import reactor-guice
 
 #### maven
 ```
@@ -24,7 +19,8 @@ mvn install:install-file -Dfile=./target/reactor-guice-0.0.3.jar -DgroupId=com.d
 compile 'com.doopp:reactor-guice:0.0.3'
 ```
 
-3. create you application
+### 2. create you application
+
 ```java
 Injector injector = Guice.createInjector(...);
 
@@ -35,6 +31,8 @@ KReactorServer.create()
         // .addFilter("/", AppFilter.class)
         .launch();
 ```
+
+### 3. creat you service
 
 #### Handle Example
 
