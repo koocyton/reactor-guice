@@ -1,6 +1,8 @@
 package com.doopp.kreactor.test.handle;
 
 import com.doopp.kreactor.common.ModelMap;
+import com.doopp.kreactor.test.entity.Point;
+import com.doopp.kreactor.test.service.MapApiService;
 import com.doopp.kreactor.test.service.TestService;
 import com.google.inject.Inject;
 import io.netty.buffer.ByteBuf;
@@ -10,6 +12,7 @@ import reactor.netty.http.client.HttpClient;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Path("/kreactor")
@@ -20,6 +23,9 @@ public class TestHandle {
 
     @Inject
     private HttpClient httpClient;
+
+    @Inject
+    private MapApiService mapApiService;
 
     @GET
     @Path("/test/json")
@@ -44,13 +50,20 @@ public class TestHandle {
 
     @GET
     @Path("/test/image")
-    @Produces({"image/jpeg"})
+    @Produces(MediaType.APPLICATION_JSON)
     public Mono<ByteBuf> testImage() {
         return httpClient
-            .get()
-            .uri("https://static.cnbetacdn.com/article/2019/0402/6398390c491f650.jpg")
-            .responseContent()
-            .aggregate()
-            .map(ByteBuf::retain);
+                .get()
+                .uri("https://static.cnbetacdn.com/article/2019/0402/6398390c491f650.jpg")
+                .responseContent()
+                .aggregate()
+                .map(ByteBuf::retain);
+    }
+
+    @GET
+    @Path("/test/points")
+    @Produces({"image/jpeg"})
+    public Mono<List<Point>> testPoints() {
+        return mapApiService.searchPoints("药房", "090601", null);
     }
 }

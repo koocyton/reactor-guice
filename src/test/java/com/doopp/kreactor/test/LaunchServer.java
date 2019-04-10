@@ -2,6 +2,10 @@ package com.doopp.kreactor.test;
 
 import com.doopp.kreactor.KReactorServer;
 import com.doopp.kreactor.test.handle.TestHandle;
+import com.doopp.kreactor.test.service.MapApiService;
+import com.doopp.kreactor.test.service.TestService;
+import com.doopp.kreactor.test.service.impl.MapApiServiceGaodeImpl;
+import com.doopp.kreactor.test.service.impl.TestServiceImpl;
 import com.google.inject.*;
 import com.google.inject.name.Names;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
@@ -26,8 +30,15 @@ public class LaunchServer {
         Properties properties = testProperties();
 
         Injector injector = Guice.createInjector(
-            binder -> Names.bindProperties(binder, properties),
-            new Module()
+                binder -> Names.bindProperties(binder, properties),
+
+                new AbstractModule() {
+                    @Override
+                    public void configure() {
+                        bind(TestService.class).to(TestServiceImpl.class).in(Scopes.SINGLETON);
+                        bind(MapApiService.class).to(MapApiServiceGaodeImpl.class).in(Scopes.SINGLETON);
+                    }
+                }
         );
 
         String host = properties.getProperty("server.host", "127.0.0.1");
