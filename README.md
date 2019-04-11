@@ -19,6 +19,21 @@ Reactor-guice integrates the framework of Google Guice and Reactor-netty
 compile 'com.doopp:reactor-guice:0.0.3'
 ```
 
+#### use Local Maven 
+```
+mvn clean
+
+mvn package
+
+mvn install:install-file -Dfile=target/reactor-guice-0.0.4.jar -DgroupId=com.doopp.local -DartifactId=reactor-guice -Dversion=0.0.4 -Dpackaging=jar
+
+<dependency>
+    <groupId>com.doopp.local</groupId>
+    <artifactId>reactor-guice</artifactId>
+    <version>0.0.4</version>
+</dependency>
+```
+
 ### 2. create you application
 
 ```java
