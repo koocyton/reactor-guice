@@ -61,21 +61,21 @@ public class HandlePublisher {
                     // json
                     if (contentType.contains(MediaType.APPLICATION_JSON)) {
                         return Mono.just(o).map(JsonResponse::new).map(gson::toJson).map(s->{
-                            resp.addHeader(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(s.length()));
+                            // resp.addHeader(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(s.length()));
                             return s;
                         });
                     }
                     // template
                     else if (o instanceof String) {
                         return this.templateMono(handleObject, modelMap, (String) o).map(s->{
-                            resp.addHeader(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(s.length()));
+                            // resp.addHeader(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(s.length()));
                             return s;
                         });
                     }
                     // binary
                     else if (o instanceof ByteBuf) {
                         return ByteBufMono.just((ByteBuf) o).map(s->{
-                            resp.addHeader(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(s.readableBytes()));
+                            // resp.addHeader(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(s.readableBytes()));
                             return s;
                         });
                     }

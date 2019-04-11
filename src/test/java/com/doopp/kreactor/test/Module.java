@@ -1,6 +1,8 @@
 package com.doopp.kreactor.test;
 
+import com.doopp.kreactor.test.service.MapApiService;
 import com.doopp.kreactor.test.service.TestService;
+import com.doopp.kreactor.test.service.impl.MapApiServiceGaodeImpl;
 import com.doopp.kreactor.test.service.impl.TestServiceImpl;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -16,6 +18,7 @@ class Module extends AbstractModule {
     @Override
     public void configure() {
         bind(TestService.class).to(TestServiceImpl.class).in(Scopes.SINGLETON);
+        bind(MapApiService.class).to(MapApiServiceGaodeImpl.class).in(Scopes.SINGLETON);
     }
 
     @Singleton

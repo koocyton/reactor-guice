@@ -9,9 +9,7 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.hash.Hashing;
 import com.google.common.net.UrlEscapers;
-import io.netty.handler.codec.http.HttpUtil;
 import reactor.core.publisher.Mono;
-import reactor.netty.http.client.HttpClient;
 
 import java.util.HashMap;
 import java.util.List;

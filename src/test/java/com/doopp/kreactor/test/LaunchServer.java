@@ -6,6 +6,7 @@ import com.doopp.kreactor.test.service.MapApiService;
 import com.doopp.kreactor.test.service.TestService;
 import com.doopp.kreactor.test.service.impl.MapApiServiceGaodeImpl;
 import com.doopp.kreactor.test.service.impl.TestServiceImpl;
+import com.doopp.kreactor.test.util.HttpClientUtil;
 import com.google.inject.*;
 import com.google.inject.name.Names;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
@@ -31,14 +32,7 @@ public class LaunchServer {
 
         Injector injector = Guice.createInjector(
                 binder -> Names.bindProperties(binder, properties),
-
-                new AbstractModule() {
-                    @Override
-                    public void configure() {
-                        bind(TestService.class).to(TestServiceImpl.class).in(Scopes.SINGLETON);
-                        bind(MapApiService.class).to(MapApiServiceGaodeImpl.class).in(Scopes.SINGLETON);
-                    }
-                }
+                new Module()
         );
 
         String host = properties.getProperty("server.host", "127.0.0.1");
@@ -47,7 +41,8 @@ public class LaunchServer {
         System.out.println(">>> http://"+host+":"+port+"/");
         System.out.println(">>> http://"+host+":"+port+"/kreactor/test/json");
         System.out.println(">>> http://"+host+":"+port+"/kreactor/test/html/123");
-        System.out.println(">>> http://"+host+":"+port+"/kreactor/test/image\n");
+        System.out.println(">>> http://"+host+":"+port+"/kreactor/test/image");
+        System.out.println(">>> http://"+host+":"+port+"/kreactor/test/points\n");
 
         KReactorServer.create()
             .bind(host, port)

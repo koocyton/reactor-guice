@@ -86,7 +86,7 @@ public class KReactorServer {
             .wiretap(true)
             .bindNow();
 
-        System.out.println("\n>>> KReactor Server Running... ");
+        System.out.printf("\n>>> KReactor Server Running http://%s:%d/ ... \n\n", this.host, this.port);
 
         disposableServer.onDispose().block();
     }
@@ -104,6 +104,7 @@ public class KReactorServer {
                 try {
                     handleObject = injector.getInstance(Class.forName(handleClassName));
                 } catch (Exception e) {
+                    e.printStackTrace();
                     continue;
                 }
                 // 如果是静态方法，或接口
@@ -169,6 +170,9 @@ public class KReactorServer {
     }
 
     private Publisher<Void> httpPublisher(HttpServerRequest req, HttpServerResponse resp, Function<Object, Mono<Object>> handle) {
+        req.withConnection(connection -> {
+
+        });
         return doFilter(req, resp, new RequestAttribute())
             .flatMap(handle)
             .onErrorResume(throwable ->

@@ -50,7 +50,7 @@ public class TestHandle {
 
     @GET
     @Path("/test/image")
-    @Produces(MediaType.APPLICATION_JSON)
+    @Produces({"image/jpeg"})
     public Mono<ByteBuf> testImage() {
         return httpClient
                 .get()
@@ -62,8 +62,13 @@ public class TestHandle {
 
     @GET
     @Path("/test/points")
-    @Produces({"image/jpeg"})
+    @Produces(MediaType.APPLICATION_JSON)
     public Mono<List<Point>> testPoints() {
-        return mapApiService.searchPoints("药房", "090601", null);
+        return mapApiService
+                .searchPoints("药房", "090601", null)
+                .map(l->{
+                    System.out.println(l);
+                    return l;
+                });
     }
 }

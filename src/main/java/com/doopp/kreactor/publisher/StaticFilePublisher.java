@@ -4,62 +4,70 @@ import com.doopp.kreactor.common.KReactorException;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpUtil;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.http.server.HttpServerResponse;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
 import java.util.HashMap;
 
 public class StaticFilePublisher {
 
     public Mono<Object> sendFile(HttpServerRequest req, HttpServerResponse resp) {
 
-        String requestUri = (req.uri().equals("/") || req.uri().equals("")) ? "/index.html" : req.uri();
-
-        String requirePath = "/public" + requestUri;
-
-        URL fileUrl = this.getClass().getResource(requirePath);
-
-        if (fileUrl == null) {
-            return Mono.error(new KReactorException(HttpResponseStatus.NOT_FOUND));
-        }
-
         return Mono.create(sink -> {
+
+            String requestUri = req.uri().replaceAll("/+", "/");
+            String requirePath = "/public" + requestUri;
 
             InputStream fileIs = this.getClass().getResourceAsStream(requirePath);
 
             if (fileIs == null) {
                 sink.error(new KReactorException(HttpResponseStatus.NOT_FOUND));
+                return;
             }
-            else {
-                ByteArrayOutputStream bout = new ByteArrayOutputStream();
-                byte[] bs = new byte[1024];
-                int len;
-                try {
-                    while ((len = fileIs.read(bs)) != -1) {
-                        bout.write(bs, 0, len);
-                    }
-                    ByteBuf buf = Unpooled.wrappedBuffer(bout.toByteArray()).retain();
-                    resp.addHeader(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(buf.readableBytes()));
-                    resp.addHeader(HttpHeaderNames.CONTENT_TYPE, contentType(requirePath.substring(requirePath.lastIndexOf(".") + 1))+"; charset=UTF-8");
-                    sink.success(buf);
-                }
-                catch (IOException e) {
-                    sink.error(new KReactorException(HttpResponseStatus.INTERNAL_SERVER_ERROR, e.getMessage()));
-                }
+
+            if (fileIs instanceof ByteArrayInputStream) {
                 try {
                     fileIs.close();
                 }
                 catch (IOException e) {
                     System.out.println("Static file input stream close failed !");
                 }
+                requirePath = requirePath+"/index.html";
+                fileIs = this.getClass().getResourceAsStream(requirePath.replaceAll("/+", "/"));
+            }
+
+            if (fileIs == null) {
+                sink.error(new KReactorException(HttpResponseStatus.NOT_FOUND));
+                return;
+            }
+
+            byte[] bs = new byte[1024];
+            int len;
+            try (ByteArrayOutputStream bout = new ByteArrayOutputStream()) {
+                while ((len = fileIs.read(bs)) != -1) {
+                    bout.write(bs, 0, len);
+                }
+                ByteBuf buf = Unpooled.wrappedBuffer(bout.toByteArray()).retain();
+                resp.addHeader(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(buf.readableBytes()));
+                resp.addHeader(HttpHeaderNames.CONTENT_TYPE, contentType(requirePath.substring(requirePath.lastIndexOf(".") + 1))+"; charset=UTF-8");
+                sink.success(buf);
+            }
+            catch (IOException e) {
+                sink.error(new KReactorException(HttpResponseStatus.INTERNAL_SERVER_ERROR, e.getMessage()));
+            }
+
+            // close file input stream
+            try {
+                fileIs.close();
+            }
+            catch (IOException e) {
+                System.out.println("Static file input stream close failed !");
             }
         });
     }
