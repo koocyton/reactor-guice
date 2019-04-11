@@ -170,9 +170,6 @@ public class KReactorServer {
     }
 
     private Publisher<Void> httpPublisher(HttpServerRequest req, HttpServerResponse resp, Function<Object, Mono<Object>> handle) {
-        req.withConnection(connection -> {
-
-        });
         return doFilter(req, resp, new RequestAttribute())
             .flatMap(handle)
             .onErrorResume(throwable ->
