@@ -10,7 +10,6 @@ import com.doopp.kreactor.common.RequestAttribute;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.LongSerializationPolicy;
-import freemarker.template.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.*;
 import io.netty.handler.codec.http.HttpMethod;
@@ -22,8 +21,6 @@ import reactor.netty.http.server.HttpServerResponse;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
-import java.io.ByteArrayOutputStream;
-import java.io.OutputStreamWriter;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.*;
@@ -35,8 +32,6 @@ public class HandlePublisher {
         .setDateFormat("yyyy-MM-dd HH:mm:ss")
         .setLongSerializationPolicy(LongSerializationPolicy.STRING)
         .create();
-
-    private final Configuration configuration = templateConfiguration();
 
     public Mono<Object> sendResult(HttpServerRequest req, HttpServerResponse resp, Method method, Object handleObject, Object requestAttribute) {
 
@@ -58,30 +53,24 @@ public class HandlePublisher {
 
                     resp.addHeader(HttpHeaderNames.CONTENT_TYPE, contentType);
 
-                    // json
-                    if (contentType.contains(MediaType.APPLICATION_JSON)) {
-                        return Mono.just(o).map(JsonResponse::new).map(gson::toJson).map(s->{
-                            // resp.addHeader(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(s.length()));
-                            return s;
-                        });
-                    }
-                    // template
-                    else if (o instanceof String) {
-                        return this.templateMono(handleObject, modelMap, (String) o).map(s->{
-                            // resp.addHeader(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(s.length()));
-                            return s;
-                        });
-                    }
                     // binary
-                    else if (o instanceof ByteBuf) {
+                    if (o instanceof ByteBuf) {
                         return ByteBufMono.just((ByteBuf) o).map(s->{
                             // resp.addHeader(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(s.readableBytes()));
                             return s;
                         });
                     }
-                    // other ...
+                    // String
+                    else if (o instanceof String &&
+                            (contentType.contains(MediaType.TEXT_HTML) || contentType.contains(MediaType.TEXT_PLAIN))) {
+                        return Mono.just((String) o);
+                    }
+                    // json
                     else {
-                        return Mono.error(new KReactorException(HttpResponseStatus.NOT_FOUND));
+                        return Mono.just(o).map(JsonResponse::new).map(gson::toJson).map(s->{
+                            // resp.addHeader(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(s.length()));
+                            return s;
+                        });
                     }
                 });
     }
@@ -232,6 +221,8 @@ public class HandlePublisher {
         }
     }
 
+    /*
+
     // 输出模版
     private Mono<String> templateMono(Object handleObject, ModelMap modelMap, String templateName) {
         return Mono.create(slink -> {
@@ -269,4 +260,6 @@ public class HandlePublisher {
         // bind(Configuration.class).toInstance(cfg);
         return cfg;
     }
+
+    */
 }
