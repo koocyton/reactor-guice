@@ -9,7 +9,9 @@ import com.doopp.kreactor.publisher.WebsocketPublisher;
 import com.doopp.kreactor.websocket.AbstractWebSocketServerHandle;
 import com.doopp.kreactor.websocket.WebSocketServerHandle;
 import com.google.inject.Injector;
+import io.netty.channel.ChannelOption;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
@@ -80,6 +82,9 @@ public class KReactorServer {
 
     public void launch() {
         DisposableServer disposableServer = HttpServer.create()
+            .tcpConfiguration(tcpServer ->
+                tcpServer.option(ChannelOption.SO_KEEPALIVE, true)
+            )
             .route(this.routesBuilder())
             .host(this.host)
             .port(this.port)
@@ -170,6 +175,14 @@ public class KReactorServer {
     }
 
     private Publisher<Void> httpPublisher(HttpServerRequest req, HttpServerResponse resp, Function<Object, Mono<Object>> handle) {
+
+        // response header
+        if (req.isKeepAlive()) {
+            resp.addHeader(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
+        }
+        resp.addHeader(HttpHeaderNames.SERVER, "power by reactor");
+
+        // result
         return doFilter(req, resp, new RequestAttribute())
             .flatMap(handle)
             .onErrorResume(throwable ->
@@ -181,7 +194,6 @@ public class KReactorServer {
                 if (o instanceof KReactorException) {
                     KReactorException ke = (KReactorException) o;
                     return resp
-                        .addHeader(HttpHeaderNames.SERVER, "power by reactor")
                         .addHeader(HttpHeaderNames.CONTENT_TYPE, MediaType.TEXT_HTML)
                         .status(ke.getCode())
                         .sendString(
@@ -189,14 +201,12 @@ public class KReactorServer {
                         ).then();
                 } else if (o instanceof String) {
                     return resp
-                        .addHeader(HttpHeaderNames.SERVER, "power by reactor")
                         .status(HttpResponseStatus.OK)
                         .sendString(
                             Mono.just((String) o)
                         ).then();
                 } else {
                     return resp
-                        .addHeader(HttpHeaderNames.SERVER, "power by reactor")
                         .status(HttpResponseStatus.OK)
                         .sendObject(
                             Mono.just(o)
@@ -231,33 +241,33 @@ public class KReactorServer {
     private Set<String> getHandleClassesName() {
         // init result
         Set<String> handleClassesName = new HashSet<>();
-        // loop search handle
-        for (String packageName : this.handlePackages) {
-            String path = "/" + packageName.replace(".", "/");
-            String resourcePath = this.getClass().getResource(path).getPath();
-            // if in jar
-            if (resourcePath.contains(".jar")) {
-                JarFile jarFile;
-                try {
-                    jarFile = new JarFile(resourcePath.substring(5, resourcePath.lastIndexOf(".jar!") + 4));
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    break;
-                }
+        String resourcePath = this.getClass().getResource("/com").getPath();
+        // if is jar package
+        if (resourcePath.contains(".jar!")) {
+            try (JarFile jarFile = new JarFile(resourcePath.substring(5, resourcePath.lastIndexOf(".jar!") + 4))) {
                 Enumeration<JarEntry> entries = jarFile.entries();
                 while (entries.hasMoreElements()) {
                     JarEntry jar = entries.nextElement();
                     String name = jar.getName();
-                    if (name.contains(packageName.replace(".", "/")) && name.contains(".class")) {
-                        int beginIndex = packageName.length() + 1;
-                        int endIndex = name.lastIndexOf(".class");
-                        String className = name.substring(beginIndex, endIndex);
-                        handleClassesName.add(packageName + "." + className);
+                    for (String packageName : this.handlePackages) {
+                        if (name.contains(packageName.replace(".", "/")) && name.contains(".class")) {
+                            int beginIndex = packageName.length() + 1;
+                            int endIndex = name.lastIndexOf(".class");
+                            String className = name.substring(beginIndex, endIndex);
+                            handleClassesName.add(packageName + "." + className);
+                        }
                     }
                 }
             }
-            // if not jar
-            else {
+            catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        // if is dir
+        else {
+            for (String packageName : this.handlePackages) {
+                String path = "/" + packageName.replace(".", "/");
+                resourcePath = this.getClass().getResource(path).getPath();
                 File dir = new File(resourcePath);
                 File[] files = dir.listFiles();
                 if (files == null) {
