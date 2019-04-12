@@ -10,13 +10,13 @@ Reactor-guice integrates the framework of Google Guice and Reactor-netty
 <dependency>
     <groupId>com.doopp</groupId>
     <artifactId>reactor-guice</artifactId>
-    <version>0.0.4</version>
+    <version>0.0.5</version>
 </dependency>
 ```
 
 #### gradle
 ```
-compile 'com.doopp:reactor-guice:0.0.4'
+compile 'com.doopp:reactor-guice:0.0.5'
 ```
 
 #### use Local Maven 
@@ -25,12 +25,12 @@ mvn clean
 
 mvn package
 
-mvn install:install-file -Dfile=target/reactor-guice-0.0.4.jar -DgroupId=com.doopp.local -DartifactId=reactor-guice -Dversion=0.0.4 -Dpackaging=jar
+mvn install:install-file -Dfile=target/reactor-guice-0.0.5.jar -DgroupId=com.doopp.local -DartifactId=reactor-guice -Dversion=0.0.5 -Dpackaging=jar
 
 <dependency>
     <groupId>com.doopp.local</groupId>
     <artifactId>reactor-guice</artifactId>
-    <version>0.0.4</version>
+    <version>0.0.5</version>
 </dependency>
 ```
 

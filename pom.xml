@@ -6,7 +6,7 @@
 
     <groupId>com.doopp</groupId>
     <artifactId>reactor-guice</artifactId>
-    <version>0.0.4</version>
+    <version>0.0.5</version>
     <description>Guice reactor-netty Components</description>
     <name>reactor-guice</name>
     <url>https://github.com/koocyton/reactor-guice</url>
@@ -150,6 +150,7 @@
     </dependencies>
 
     <build>
+        <pluginManagement>
         <plugins>
             <!--生成Source jar文件-->
             <plugin>
@@ -218,6 +219,7 @@
                 </configuration>
             </plugin>
         </plugins>
+        </pluginManagement>
     </build>
 
 </project>
