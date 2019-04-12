@@ -65,13 +65,6 @@ public Mono<Map<String, String>> json() {
         });
 }
 
-/** https://kreactor.doopp.com/test/template **/
-@GET
-@Path("/template")
-public Mono<String> template() {
-    return Mono.just("template");
-}
-
 /** https://kreactor.doopp.com/test/jpeg **/
 @GET
 @Path("/jpeg")

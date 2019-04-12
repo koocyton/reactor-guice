@@ -24,24 +24,14 @@ public class StaticFilePublisher {
             String requestUri = req.uri().replaceAll("/+", "/");
             String requirePath = "/public" + requestUri;
 
+            // if is dir
+            int requestPathLength = requirePath.length();
+            if (requirePath.substring(requestPathLength-1, requestPathLength).equals("/")) {
+                requirePath = requirePath + "index.html";
+            }
+
+            // get input stream
             InputStream fileIs = this.getClass().getResourceAsStream(requirePath);
-
-            if (fileIs == null) {
-                sink.error(new KReactorException(HttpResponseStatus.NOT_FOUND));
-                return;
-            }
-
-            if (fileIs instanceof ByteArrayInputStream) {
-                try {
-                    fileIs.close();
-                }
-                catch (IOException e) {
-                    System.out.println("Static file input stream close failed !");
-                }
-                requirePath = requirePath+"/index.html";
-                fileIs = this.getClass().getResourceAsStream(requirePath.replaceAll("/+", "/"));
-            }
-
             if (fileIs == null) {
                 sink.error(new KReactorException(HttpResponseStatus.NOT_FOUND));
                 return;
