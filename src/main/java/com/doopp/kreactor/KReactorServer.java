@@ -27,6 +27,7 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.net.URL;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -37,12 +38,6 @@ public class KReactorServer {
 
     private static final KReactorServer INSTANCE = new KReactorServer();
 
-    private static final HandlePublisher handlePublisher = new HandlePublisher();
-
-    private static final StaticFilePublisher staticFilePublisher = new StaticFilePublisher();
-
-    private static final WebsocketPublisher websocketPublisher = new WebsocketPublisher();
-
     private String host = "127.0.0.1";
 
     private int port = 8081;
@@ -52,6 +47,8 @@ public class KReactorServer {
     private final Map<String, KReactorFilter> filters = new HashMap<>();
 
     private final Set<String> handlePackages = new HashSet<>();
+
+    private final Map<String, String> jarPublicDirectories = new HashMap<>();
 
     public static KReactorServer create() {
         return INSTANCE;
@@ -97,7 +94,11 @@ public class KReactorServer {
     }
 
     private Consumer<HttpServerRoutes> routesBuilder() {
-
+        // handle
+        HandlePublisher handlePublisher = new HandlePublisher();
+        // websocket
+        WebsocketPublisher websocketPublisher = new WebsocketPublisher();
+        // routes
         return routes -> {
             Set<String> handleClassesName = this.getHandleClassesName();
             for (String handleClassName : handleClassesName) {
@@ -166,6 +167,8 @@ public class KReactorServer {
                     }
                 }
             }
+            StaticFilePublisher staticFilePublisher = new StaticFilePublisher(this.jarPublicDirectories);
+            // static
             System.out.println("   GET /** →  /public/* <static files>");
             routes.get("/**", (req, resp) -> httpPublisher(req, resp, o ->
                     staticFilePublisher.sendFile(req, resp)
@@ -241,7 +244,14 @@ public class KReactorServer {
     private Set<String> getHandleClassesName() {
         // init result
         Set<String> handleClassesName = new HashSet<>();
-        String resourcePath = this.getClass().getResource("/com").getPath();
+        if (this.handlePackages.size()<1) {
+            return handleClassesName;
+        }
+        URL resourceUrl = this.getClass().getResource("/" + this.handlePackages.iterator().next().replace(".", "/"));
+        if (resourceUrl==null) {
+            return handleClassesName;
+        }
+        String resourcePath = resourceUrl.getPath();
         // if is jar package
         if (resourcePath.contains(".jar!")) {
             try (JarFile jarFile = new JarFile(resourcePath.substring(5, resourcePath.lastIndexOf(".jar!") + 4))) {
@@ -249,6 +259,9 @@ public class KReactorServer {
                 while (entries.hasMoreElements()) {
                     JarEntry jar = entries.nextElement();
                     String name = jar.getName();
+                    if (name.startsWith("public/") && name.endsWith("/")) {
+                        this.jarPublicDirectories.put("/"+name, "/"+name);
+                    }
                     for (String packageName : this.handlePackages) {
                         if (name.contains(packageName.replace(".", "/")) && name.contains(".class")) {
                             int beginIndex = packageName.length() + 1;

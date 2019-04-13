@@ -9,12 +9,18 @@ import reactor.core.publisher.Mono;
 import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.http.server.HttpServerResponse;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
+import java.net.URL;
 import java.util.HashMap;
+import java.util.Map;
 
 public class StaticFilePublisher {
+
+    private final Map<String, String> jarPublicDirectories;
+
+    public StaticFilePublisher(Map<String, String> jarPublicDirectories) {
+        this.jarPublicDirectories = jarPublicDirectories;
+    }
 
     public Mono<Object> sendFile(HttpServerRequest req, HttpServerResponse resp) {
 
@@ -22,20 +28,32 @@ public class StaticFilePublisher {
 
             String requestUri = req.uri().replaceAll("/+", "/");
             String requirePath = "/public" + requestUri;
+            String requestDir = requirePath.endsWith("/") ? requirePath : requirePath + "/";
 
-            // if is dir
-            int requestPathLength = requirePath.length();
-            if (requirePath.substring(requestPathLength-1, requestPathLength).equals("/")) {
-                requirePath = requirePath + "index.html";
+            // if in jar file
+            if (jarPublicDirectories.size()>=1) {
+                requirePath = (jarPublicDirectories.get(requestDir)==null) ? requirePath : requestDir + "index.html";
+                URL requestResource = this.getClass().getResource(requirePath);
+                if (requestResource==null) {
+                    sink.error(new KReactorException(HttpResponseStatus.NOT_FOUND));
+                    return;
+                }
+            }
+            // if is file system
+            else {
+                URL requestResource = this.getClass().getResource(requirePath);
+                if (requestResource==null) {
+                    sink.error(new KReactorException(HttpResponseStatus.NOT_FOUND));
+                    return;
+                }
+                File resourceFile = new File(requestResource.getPath());
+                if (resourceFile.isDirectory()) {
+                    requirePath += requirePath.endsWith("/") ? "index.html" : "/index.html";
+                }
             }
 
             // get input stream
             InputStream fileIs = this.getClass().getResourceAsStream(requirePath);
-            if (fileIs == null) {
-                sink.error(new KReactorException(HttpResponseStatus.NOT_FOUND));
-                return;
-            }
-
             byte[] bs = new byte[1024];
             int len;
             try (ByteArrayOutputStream bout = new ByteArrayOutputStream()) {
