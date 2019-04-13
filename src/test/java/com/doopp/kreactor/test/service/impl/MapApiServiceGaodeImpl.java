@@ -17,7 +17,7 @@ import java.util.Map;
 
 public class MapApiServiceGaodeImpl implements MapApiService {
 
-    private static final String gaodeSecretKey = "df29fa0d09f2ee18ee93a9b761";
+    private static final String gaodeSecretKey = "...";
 
     private static final String gaodeApiUrl = "https://restapi.amap.com/v3/place/around";
 
@@ -44,7 +44,8 @@ public class MapApiServiceGaodeImpl implements MapApiService {
 
         String queryParams = Joiner.on("&").withKeyValueSeparator("=").join(paramsSorted);
 
-        String md5Sig = Hashing.md5().hashBytes((queryParams + gaodeSecretKey).getBytes()).toString();
+        // String md5Sig = Hashing.md5().hashBytes((queryParams + gaodeSecretKey).getBytes()).toString();
+        String md5Sig = Hashing.goodFastHash(256).hashBytes((queryParams + gaodeSecretKey).getBytes()).toString();
 
         return gaodeApiUrl + "?" + queryParams + "&sig=" + md5Sig;
     }
