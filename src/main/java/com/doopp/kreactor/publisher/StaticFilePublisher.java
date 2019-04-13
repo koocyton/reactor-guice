@@ -10,7 +10,6 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.http.server.HttpServerResponse;
-import reactor.netty.http.server.HttpServerState;
 
 import javax.ws.rs.core.MediaType;
 import java.io.*;
@@ -24,7 +23,6 @@ public class StaticFilePublisher {
 
     public StaticFilePublisher(Map<String, String> jarPublicDirectories) {
         this.jarPublicDirectories = jarPublicDirectories;
-        System.out.println(jarPublicDirectories);
     }
 
     public Mono<Object> sendFile(HttpServerRequest req, HttpServerResponse resp) {
