@@ -2,13 +2,17 @@ package com.doopp.kreactor.publisher;
 
 import com.doopp.kreactor.common.KReactorException;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.EmptyByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.http.server.HttpServerResponse;
+import reactor.netty.http.server.HttpServerState;
 
+import javax.ws.rs.core.MediaType;
 import java.io.*;
 import java.net.URL;
 import java.util.HashMap;
@@ -20,6 +24,7 @@ public class StaticFilePublisher {
 
     public StaticFilePublisher(Map<String, String> jarPublicDirectories) {
         this.jarPublicDirectories = jarPublicDirectories;
+        System.out.println(jarPublicDirectories);
     }
 
     public Mono<Object> sendFile(HttpServerRequest req, HttpServerResponse resp) {
@@ -27,28 +32,35 @@ public class StaticFilePublisher {
         return Mono.create(sink -> {
 
             String requestUri = req.uri().replaceAll("/+", "/");
-            String requirePath = "/public" + requestUri;
-            String requestDir = requirePath.endsWith("/") ? requirePath : requirePath + "/";
+            String requirePath = requestUri.endsWith("/") ? "/public" + requestUri + "index.html" : "/public" + requestUri;
 
-            // if in jar file
+            URL requestResource = this.getClass().getResource(requirePath);
+            if (requestResource==null) {
+                sink.error(new KReactorException(HttpResponseStatus.NOT_FOUND));
+                return;
+            }
+
+            // if is jar file
             if (jarPublicDirectories.size()>=1) {
-                requirePath = (jarPublicDirectories.get(requestDir)==null) ? requirePath : requestDir + "index.html";
-                URL requestResource = this.getClass().getResource(requirePath);
-                if (requestResource==null) {
-                    sink.error(new KReactorException(HttpResponseStatus.NOT_FOUND));
+                // is director
+                if (jarPublicDirectories.get(requirePath+"/")!=null) {
+                    resp.status(HttpResponseStatus.MOVED_PERMANENTLY);
+                    resp.addHeader(HttpHeaderNames.CONTENT_TYPE, MediaType.TEXT_HTML);
+                    resp.addHeader(HttpHeaderNames.LOCATION, requestUri + "/");
+                    sink.success(new EmptyByteBuf(ByteBufAllocator.DEFAULT));
                     return;
                 }
             }
             // if is file system
             else {
-                URL requestResource = this.getClass().getResource(requirePath);
-                if (requestResource==null) {
-                    sink.error(new KReactorException(HttpResponseStatus.NOT_FOUND));
-                    return;
-                }
                 File resourceFile = new File(requestResource.getPath());
+                // is director
                 if (resourceFile.isDirectory()) {
-                    requirePath += requirePath.endsWith("/") ? "index.html" : "/index.html";
+                    resp.status(HttpResponseStatus.MOVED_PERMANENTLY);
+                    resp.addHeader(HttpHeaderNames.CONTENT_TYPE, MediaType.TEXT_HTML);
+                    resp.addHeader(HttpHeaderNames.LOCATION, requestUri + "/");
+                    sink.success(new EmptyByteBuf(ByteBufAllocator.DEFAULT));
+                    return;
                 }
             }
 

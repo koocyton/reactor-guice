@@ -203,14 +203,16 @@ public class KReactorServer {
                             Mono.just(ke.getMessage())
                         ).then();
                 } else if (o instanceof String) {
+                    HttpResponseStatus status = (resp.status()==null) ? HttpResponseStatus.OK : resp.status();
                     return resp
-                        .status(HttpResponseStatus.OK)
+                        .status(status)
                         .sendString(
                             Mono.just((String) o)
                         ).then();
                 } else {
+                    HttpResponseStatus status = (resp.status()==null) ? HttpResponseStatus.OK : resp.status();
                     return resp
-                        .status(HttpResponseStatus.OK)
+                        .status(status)
                         .sendObject(
                             Mono.just(o)
                         ).then();
