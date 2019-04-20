@@ -1,0 +1,311 @@
+package com.doopp.reactor.guice;
+
+import com.doopp.reactor.guice.common.*;
+import com.doopp.reactor.guice.publisher.*;
+import com.doopp.reactor.guice.websocket.AbstractWebSocketServerHandle;
+import com.doopp.reactor.guice.websocket.WebSocketServerHandle;
+import com.google.inject.Injector;
+import io.netty.channel.ChannelOption;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import org.reactivestreams.Publisher;
+import reactor.core.publisher.Mono;
+import reactor.netty.DisposableServer;
+import reactor.netty.http.server.HttpServer;
+import reactor.netty.http.server.HttpServerRequest;
+import reactor.netty.http.server.HttpServerResponse;
+import reactor.netty.http.server.HttpServerRoutes;
+
+import javax.ws.rs.*;
+import javax.ws.rs.core.MediaType;
+import java.io.File;
+import java.io.IOException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.net.URL;
+import java.util.*;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
+
+public class ReactorGuiceServer {
+
+    private String host = "127.0.0.1";
+
+    private int port = 8081;
+
+    // handle
+    private HandlePublisher handlePublisher = new HandlePublisher();
+
+    // websocket
+    private WebsocketPublisher websocketPublisher = new WebsocketPublisher();
+
+    private Injector injector;
+
+    private final Map<String, ReactorGuiceFilter> filters = new HashMap<>();
+
+    private final Set<String> handlePackages = new HashSet<>();
+
+    private final Map<String, String> jarPublicDirectories = new HashMap<>();
+
+    public static ReactorGuiceServer create() {
+        return new ReactorGuiceServer();
+    }
+
+    public ReactorGuiceServer bind(String host, int port) {
+        this.host = host;
+        this.port = port;
+        return this;
+    }
+
+    public ReactorGuiceServer handlePackages(String... basePackages) {
+        Collections.addAll(this.handlePackages, basePackages);
+        return this;
+    }
+
+    public ReactorGuiceServer injector(Injector injector) {
+        assert injector!=null : "A Injector instance is required";
+        this.injector = injector;
+        return this;
+    }
+
+    public ReactorGuiceServer addFilter(String path, Class<? extends ReactorGuiceFilter> clazz) {
+        if (this.injector!=null) {
+            this.filters.put(path, this.injector.getInstance(clazz));
+        }
+        return this;
+    }
+
+    public ReactorGuiceServer setHttpMessageConverter(HttpMessageConverter httpMessageConverter) {
+        assert httpMessageConverter!=null : "A HttpMessageConverter instance is required";
+        handlePublisher.setHttpMessageConverter(httpMessageConverter);
+        return this;
+    }
+
+    public ReactorGuiceServer setTemplateDelegate(TemplateDelegate templateDelegate) {
+        assert templateDelegate!=null : "A TemplateDelegate instance is required";
+        handlePublisher.setTemplateDelegate(templateDelegate);
+        return this;
+    }
+
+    public void launch() {
+
+        DisposableServer disposableServer = HttpServer.create()
+            .tcpConfiguration(tcpServer ->
+                tcpServer.option(ChannelOption.SO_KEEPALIVE, true)
+            )
+            .route(this.routesBuilder())
+            .host(this.host)
+            .port(this.port)
+            .wiretap(true)
+            .bindNow();
+
+        System.out.printf("\n>>> KReactor Server Running http://%s:%d/ ... \n\n", this.host, this.port);
+
+        disposableServer.onDispose().block();
+    }
+
+    private Consumer<HttpServerRoutes> routesBuilder() {
+        // routes
+        return routes -> {
+            Set<String> handleClassesName = this.getHandleClassesName();
+            for (String handleClassName : handleClassesName) {
+                if (injector == null) {
+                    continue;
+                }
+                Object handleObject;
+                // 如果初始化对象有问题
+                try {
+                    handleObject = injector.getInstance(Class.forName(handleClassName));
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    continue;
+                }
+                // 如果是静态方法，或接口
+                int classModifiers = handleObject.getClass().getModifiers();
+                if (Modifier.isAbstract(classModifiers) || Modifier.isInterface(classModifiers)) {
+                    continue;
+                }
+                // 拿到根路径
+                Path pathAnnotation = handleObject.getClass().getAnnotation(Path.class);
+                String rootPath = (pathAnnotation == null) ? "" : pathAnnotation.value();
+                // if websocket
+                if (AbstractWebSocketServerHandle.class.isAssignableFrom(handleObject.getClass()) && pathAnnotation != null) {
+                    System.out.println("    WS " + rootPath + " → " + handleClassName);
+                    routes.get(rootPath, (req, resp) -> httpPublisher(req, resp, o ->
+                            websocketPublisher.sendMessage(req, resp, (WebSocketServerHandle) handleObject, o)
+                    ));
+                    continue;
+                }
+                // methods for handle
+                Method[] handleMethods = handleObject.getClass().getMethods();
+                // loop methods
+                for (Method method : handleMethods) {
+                    // if have request path
+                    if (method.isAnnotationPresent(Path.class)) {
+                        String requestPath = rootPath + method.getAnnotation(Path.class).value();
+                        // GET
+                        if (method.isAnnotationPresent(GET.class)) {
+                            System.out.println("   GET " + requestPath + " → " + handleClassName + ":" + method.getName());
+                            routes.get(requestPath, (req, resp) -> httpPublisher(req, resp, o ->
+                                handlePublisher.sendResult(req, resp, method, handleObject, o)
+                            ));
+                        }
+                        // POST
+                        else if (method.isAnnotationPresent(POST.class)) {
+                            System.out.println("  POST " + requestPath + " → " + handleClassName + ":" + method.getName());
+                            routes.post(requestPath, (req, resp) -> httpPublisher(req, resp, o ->
+                                handlePublisher.sendResult(req, resp, method, handleObject, o)
+                            ));
+                        }
+                        // DELETE
+                        else if (method.isAnnotationPresent(DELETE.class)) {
+                            System.out.println("DELETE " + requestPath + " → " + handleClassName + ":" + method.getName());
+                            routes.delete(requestPath, (req, resp) -> httpPublisher(req, resp, o ->
+                                handlePublisher.sendResult(req, resp, method, handleObject, o)
+                            ));
+                        }
+                        // UPDATE
+                        else if (method.isAnnotationPresent(PUT.class)) {
+                            System.out.println("   PUT " + requestPath + " → " + handleClassName + ":" + method.getName());
+                            routes.put(requestPath, (req, resp) -> httpPublisher(req, resp, o ->
+                                handlePublisher.sendResult(req, resp, method, handleObject, o)
+                            ));
+                        }
+                    }
+                }
+            }
+            StaticFilePublisher staticFilePublisher = new StaticFilePublisher(this.jarPublicDirectories);
+            // static
+            System.out.println("   GET /** →  /public/* <static files>");
+            routes.get("/**", (req, resp) -> httpPublisher(req, resp, o ->
+                    staticFilePublisher.sendFile(req, resp)
+                )
+            );
+        };
+    }
+
+    private Publisher<Void> httpPublisher(HttpServerRequest req, HttpServerResponse resp, Function<Object, Mono<Object>> handle) {
+
+        // response header
+        if (req.isKeepAlive()) {
+            resp.addHeader(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
+        }
+        resp.addHeader(HttpHeaderNames.SERVER, "power by reactor");
+
+        // result
+        return doFilter(req, resp, new RequestAttribute())
+            .flatMap(handle)
+            .onErrorResume(throwable ->
+                (throwable instanceof ReactorGuiceException)
+                    ? Mono.just(throwable)
+                    : Mono.just(new ReactorGuiceException(HttpResponseStatus.INTERNAL_SERVER_ERROR, throwable.getMessage()))
+            )
+            .flatMap(o -> {
+                if (o instanceof ReactorGuiceException) {
+                    ReactorGuiceException ke = (ReactorGuiceException) o;
+                    return resp
+                        .addHeader(HttpHeaderNames.CONTENT_TYPE, MediaType.TEXT_HTML)
+                        .status(ke.getCode())
+                        .sendString(
+                            Mono.just(ke.getMessage())
+                        ).then();
+                } else if (o instanceof String) {
+                    HttpResponseStatus status = (resp.status()==null) ? HttpResponseStatus.OK : resp.status();
+                    return resp
+                        .status(status)
+                        .sendString(
+                            Mono.just((String) o)
+                        ).then();
+                } else {
+                    HttpResponseStatus status = (resp.status()==null) ? HttpResponseStatus.OK : resp.status();
+                    return resp
+                        .status(status)
+                        .sendObject(
+                            Mono.just(o)
+                        ).then();
+                }
+            });
+    }
+
+
+    /**
+     * 处理 filter
+     *
+     * @param req              HttpServerRequest
+     * @param resp             HttpServerResponse
+     * @param requestAttribute 当次请求
+     * @return Mono
+     */
+    private Mono<Object> doFilter(HttpServerRequest req, HttpServerResponse resp, RequestAttribute requestAttribute) {
+        for (String key : this.filters.keySet()) {
+            if (req.uri().length() >= key.length() && req.uri().substring(0, key.length()).equals(key)) {
+                return this.filters.get(key).doFilter(req, resp, requestAttribute);
+            }
+        }
+        return Mono.just(requestAttribute);
+    }
+
+    /**
+     * 获取 handle 的类名
+     *
+     * @return Set<String>
+     */
+    private Set<String> getHandleClassesName() {
+        // init result
+        Set<String> handleClassesName = new HashSet<>();
+        if (this.handlePackages.size()<1) {
+            return handleClassesName;
+        }
+        URL resourceUrl = this.getClass().getResource("/" + this.handlePackages.iterator().next().replace(".", "/"));
+        if (resourceUrl==null) {
+            return handleClassesName;
+        }
+        String resourcePath = resourceUrl.getPath();
+        // if is jar package
+        if (resourcePath.contains(".jar!")) {
+            try (JarFile jarFile = new JarFile(resourcePath.substring(5, resourcePath.lastIndexOf(".jar!") + 4))) {
+                Enumeration<JarEntry> entries = jarFile.entries();
+                while (entries.hasMoreElements()) {
+                    JarEntry jar = entries.nextElement();
+                    String name = jar.getName();
+                    if (name.startsWith("public/") && name.endsWith("/")) {
+                        this.jarPublicDirectories.put("/"+name, "/"+name);
+                    }
+                    for (String packageName : this.handlePackages) {
+                        if (name.contains(packageName.replace(".", "/")) && name.contains(".class")) {
+                            int beginIndex = packageName.length() + 1;
+                            int endIndex = name.lastIndexOf(".class");
+                            String className = name.substring(beginIndex, endIndex);
+                            handleClassesName.add(packageName + "." + className);
+                        }
+                    }
+                }
+            }
+            catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        // if is dir
+        else {
+            for (String packageName : this.handlePackages) {
+                String path = "/" + packageName.replace(".", "/");
+                resourcePath = this.getClass().getResource(path).getPath();
+                File dir = new File(resourcePath);
+                File[] files = dir.listFiles();
+                if (files == null) {
+                    continue;
+                }
+                for (File file : files) {
+                    String name = file.getName();
+                    int endIndex = name.lastIndexOf(".class");
+                    String className = name.substring(0, endIndex);
+                    handleClassesName.add(packageName + "." + className);
+                }
+            }
+        }
+        return handleClassesName;
+    }
+}
