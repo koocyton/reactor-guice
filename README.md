@@ -10,13 +10,13 @@ Reactor-guice integrates the framework of Google Guice and Reactor-netty
 <dependency>
     <groupId>com.doopp</groupId>
     <artifactId>reactor-guice</artifactId>
-    <version>0.0.5</version>
+    <version>0.0.6</version>
 </dependency>
 ```
 
 #### gradle
 ```
-compile 'com.doopp:reactor-guice:0.0.5'
+compile 'com.doopp:reactor-guice:0.0.6'
 ```
 
 #### use Local Maven 
@@ -25,12 +25,12 @@ mvn clean
 
 mvn package
 
-mvn install:install-file -Dfile=target/reactor-guice-0.0.5.jar -DgroupId=com.doopp.local -DartifactId=reactor-guice -Dversion=0.0.5 -Dpackaging=jar
+mvn install:install-file -Dfile=target/reactor-guice-0.0.6.jar -DgroupId=com.doopp.local -DartifactId=reactor-guice -Dversion=0.0.6 -Dpackaging=jar
 
 <dependency>
     <groupId>com.doopp.local</groupId>
     <artifactId>reactor-guice</artifactId>
-    <version>0.0.5</version>
+    <version>0.0.6</version>
 </dependency>
 ```
 
@@ -39,12 +39,14 @@ mvn install:install-file -Dfile=target/reactor-guice-0.0.5.jar -DgroupId=com.doo
 ```java
 Injector injector = Guice.createInjector(...);
 
-KReactorServer.create()
-        .bind(host, port)
-        .injector(injector)
-        .handlePackages("you_handle_package")
-        // .addFilter("/", AppFilter.class)
-        .launch();
+ReactorGuiceServer.create()
+    .bind(host, port)
+    .injector(injector)
+    .setHttpMessageConverter(new JacksonHttpMessageConverter())
+    .setTemplateDelegate(new FreemarkTemplateDelegate())
+    .handlePackages("com.doopp.reactor.guice.test.handle")
+    .addFilter("/", Filter.class)
+    .launch();
 ```
 
 ### 3. creat you service
