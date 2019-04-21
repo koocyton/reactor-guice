@@ -1,6 +1,7 @@
 package com.doopp.reactor.guice.test.handle;
 
 import com.doopp.reactor.guice.common.ModelMap;
+import com.doopp.reactor.guice.common.ReactorGuiceException;
 import com.doopp.reactor.guice.test.entity.Point;
 import com.doopp.reactor.guice.test.service.MapApiService;
 import com.doopp.reactor.guice.test.service.TestService;
@@ -76,7 +77,6 @@ public class TestHandle {
     @Path("/test/params")
     @Produces(MediaType.APPLICATION_JSON)
     public Mono<String[]> testParams(@FormParam("test") String[] abc) {
-        System.out.println(abc);
-        return Mono.just(abc);
+        return abc==null ? Mono.error(new ReactorGuiceException(500, "abc must init")) : Mono.just(abc);
     }
 }

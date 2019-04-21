@@ -183,8 +183,11 @@ public class HandlePublisher {
     }
 
     private <T> T getParamTypeValue(List<String> value, Class<T> clazz) {
+        if (value == null) {
+            return clazz.cast(null);
+        }
         // Long
-        if (clazz == Long.class) {
+        else if (clazz == Long.class) {
             return clazz.cast(Long.valueOf(value.get(0)));
         }
         // Integer
