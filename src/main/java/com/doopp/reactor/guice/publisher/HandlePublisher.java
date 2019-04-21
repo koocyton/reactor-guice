@@ -232,7 +232,7 @@ public class HandlePublisher {
             return clazz.cast(value.toArray(new String[0]));
         }
         // default return null;
-        return clazz.cast(null);
+        return clazz.cast(value);
     }
 
     // Get 请求
