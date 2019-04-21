@@ -198,10 +198,10 @@ public class ReactorGuiceServer {
         // result
         return doFilter(req, resp, new RequestAttribute())
             .flatMap(handle)
-            .onErrorResume(throwable -> {
+            .onErrorMap(throwable -> {
                 return (throwable instanceof ReactorGuiceException)
-                    ? Mono.just(throwable)
-                    : Mono.just(new ReactorGuiceException(HttpResponseStatus.INTERNAL_SERVER_ERROR, throwable.getMessage()));
+                    ? throwable
+                    : new ReactorGuiceException(HttpResponseStatus.INTERNAL_SERVER_ERROR, throwable.getMessage());
             })
             .flatMap(o -> {
                 if (o instanceof ReactorGuiceException) {
