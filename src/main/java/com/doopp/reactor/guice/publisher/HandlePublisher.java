@@ -102,15 +102,16 @@ public class HandlePublisher {
     private Object[] getMethodParams(Method method, HttpServerRequest request, HttpServerResponse response, RequestAttribute requestAttribute, ModelMap modelMap, ByteBuf content) {
         ArrayList<Object> objectList = new ArrayList<>();
 
-        Map<String, String> questParams = new HashMap<>();
-        Map<String, String> formParams = new HashMap<>();
-        Map<String, MemoryFileUpload> fileParams = new HashMap<>();
+        Map<String, List<String>> questParams = new HashMap<>();
+        Map<String, List<String>> formParams = new HashMap<>();
+        Map<String, List<MemoryFileUpload>> fileParams = new HashMap<>();
 
         this.queryParams(request, questParams);
         this.formParams(request, content, formParams, fileParams);
 
         for (Parameter parameter : method.getParameters()) {
             Class<?> parameterClazz = parameter.getType();
+            ArrayList<String> annotationVal = new ArrayList<>();
             // RequestAttribute
             if (parameterClazz == RequestAttribute.class) {
                 objectList.add(requestAttribute);
@@ -140,22 +141,25 @@ public class HandlePublisher {
             // CookieParam
             else if (parameter.getAnnotation(CookieParam.class) != null) {
                 String annotationKey = parameter.getAnnotation(CookieParam.class).value();
-                objectList.add(getParamTypeValue(request.cookies().get(annotationKey).toString(), parameterClazz));
+                Collections.addAll(annotationVal, request.cookies().get(annotationKey).toString());
+                objectList.add(getParamTypeValue(annotationVal, parameterClazz));
             }
             // HeaderParam
             else if (parameter.getAnnotation(HeaderParam.class) != null) {
                 String annotationKey = parameter.getAnnotation(HeaderParam.class).value();
-                objectList.add(getParamTypeValue(request.requestHeaders().get(annotationKey), parameterClazz));
+                Collections.addAll(annotationVal, request.requestHeaders().get(annotationKey));
+                objectList.add(getParamTypeValue(annotationVal, parameterClazz));
+            }
+            // PathParam
+            else if (parameter.getAnnotation(PathParam.class) != null) {
+                String annotationKey = parameter.getAnnotation(PathParam.class).value();
+                Collections.addAll(annotationVal, request.param(annotationKey));
+                objectList.add(getParamTypeValue(annotationVal, parameterClazz));
             }
             // QueryParam
             else if (parameter.getAnnotation(QueryParam.class) != null) {
                 String annotationKey = parameter.getAnnotation(QueryParam.class).value();
                 objectList.add(getParamTypeValue(questParams.get(annotationKey), parameterClazz));
-            }
-            // PathParam
-            else if (parameter.getAnnotation(PathParam.class) != null) {
-                String annotationKey = parameter.getAnnotation(PathParam.class).value();
-                objectList.add(getParamTypeValue(request.param(annotationKey), parameterClazz));
             }
             // FormParam
             else if (parameter.getAnnotation(FormParam.class) != null) {
@@ -178,56 +182,72 @@ public class HandlePublisher {
         return objectList.toArray();
     }
 
-    private <T> T getParamTypeValue(String value, Class<T> clazz) {
+    private <T> T getParamTypeValue(List<String> value, Class<T> clazz) {
         // Long
         if (clazz == Long.class) {
-            return clazz.cast(Long.valueOf(value));
+            return clazz.cast(Long.valueOf(value.get(0)));
         }
         // Integer
         else if (clazz == Integer.class) {
-            return clazz.cast(Integer.valueOf(value));
+            return clazz.cast(Integer.valueOf(value.get(0)));
         }
         // Boolean
         else if (clazz == Boolean.class) {
-            return clazz.cast(Boolean.valueOf(value));
+            return clazz.cast(Boolean.valueOf(value.get(0)));
         }
         // String
         else if (clazz == String.class) {
-            return clazz.cast(value);
+            return clazz.cast(value.get(0));
         }
         // Float
         else if (clazz == Float.class) {
-            return clazz.cast(Float.valueOf(value));
+            return clazz.cast(Float.valueOf(value.get(0)));
         }
         // Double
         else if (clazz == Double.class) {
-            return clazz.cast(Double.valueOf(value));
+            return clazz.cast(Double.valueOf(value.get(0)));
         }
         // Short
         else if (clazz == Short.class) {
-            return clazz.cast(Short.valueOf(value));
+            return clazz.cast(Short.valueOf(value.get(0)));
         }
-        // List<String>
-        else if (clazz == new ArrayList<String>(){}.getClass()) {
-            return clazz.cast(Short.valueOf(value));
+        // Long[]
+        else if (clazz == Long[].class) {
+            ArrayList<Long> longValues = new ArrayList<>();
+            for (String s : value) {
+                longValues.add(Long.valueOf(s));
+            }
+            return clazz.cast(longValues.toArray(new Long[0]));
+        }
+        // Integer[]
+        else if (clazz == Integer[].class) {
+            ArrayList<Integer> intValues = new ArrayList<>();
+            for (String s : value) {
+                intValues.add(Integer.valueOf(s));
+            }
+            return clazz.cast(intValues.toArray(new Integer[0]));
+        }
+        // String[]
+        else if (clazz == String[].class) {
+            return clazz.cast(value.toArray(new String[0]));
         }
         // default return null;
-        return null;
+        return clazz.cast(null);
     }
 
     // Get 请求
-    private void queryParams(HttpServerRequest request, Map<String, String> questParams) {
+    private void queryParams(HttpServerRequest request, Map<String, List<String>> questParams) {
         // Map<String, String> requestParams = new HashMap<>();
         // Query Params
         QueryStringDecoder decoder = new QueryStringDecoder(request.uri());
         Map<String, List<String>> params = decoder.parameters();
         for (Map.Entry<String, List<String>> next : params.entrySet()) {
-            questParams.put(next.getKey(), next.getValue().get(0));
+            questParams.put(next.getKey(), next.getValue());
         }
     }
 
     // Post 请求
-    private void formParams(HttpServerRequest request, ByteBuf content, Map<String, String> formParams, Map<String, MemoryFileUpload> fileParams) {
+    private void formParams(HttpServerRequest request, ByteBuf content, Map<String, List<String>> formParams, Map<String, List<MemoryFileUpload>> fileParams) {
         if (content != null) {
             // POST Params
             FullHttpRequest dhr = new DefaultFullHttpRequest(request.version(), request.method(), request.uri(), content, request.requestHeaders(), EmptyHttpHeaders.INSTANCE);
@@ -237,12 +257,32 @@ public class HandlePublisher {
                 // 一般 post 内容
                 if (data.getHttpDataType() == InterfaceHttpData.HttpDataType.Attribute) {
                     MemoryAttribute attribute = (MemoryAttribute) data;
-                    formParams.put(attribute.getName(), attribute.getValue());
+                    // System.out.println(data);
+                    // formParams.put(attribute.getName(), attribute.getValue());
+                    List<String> formParam = formParams.get(attribute.getName());
+                    if (formParam==null) {
+                        formParam = new ArrayList<>();
+                        formParam.add(attribute.getValue());
+                        formParams.put(attribute.getName(), formParam);
+                    }
+                    else {
+                        formParam.add(attribute.getValue());
+                    }
                 }
                 // 上传文件的内容
                 else if (data.getHttpDataType() == InterfaceHttpData.HttpDataType.FileUpload) {
                     MemoryFileUpload fileUpload = (MemoryFileUpload) data;
-                    fileParams.put(fileUpload.getName(), fileUpload);
+                    // fileParams.put(fileUpload.getName(), fileUpload);
+                    // fileParams.put(fileUpload.getName(), null);
+                    List<MemoryFileUpload> fileParam = fileParams.get(fileUpload.getName());
+                    if (fileParam==null) {
+                        fileParam = new ArrayList<>();
+                        fileParam.add(fileUpload);
+                        fileParams.put(fileUpload.getName(), fileParam);
+                    }
+                    else {
+                        fileParam.add(fileUpload);
+                    }
                 }
             }
         }

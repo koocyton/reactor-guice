@@ -65,10 +65,18 @@ public class TestHandle {
     @Produces(MediaType.APPLICATION_JSON)
     public Mono<List<Point>> testPoints() {
         return mapApiService
-                .searchPoints("药房", "090601", null)
-                .map(l->{
-                    System.out.println(l);
-                    return l;
-                });
+            .searchPoints("药房", "090601", null)
+            .map(l->{
+                System.out.println(l);
+                return l;
+            });
+    }
+
+    @POST
+    @Path("/test/params")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Mono<String[]> testParams(@FormParam("test") String[] abc) {
+        System.out.println(abc);
+        return Mono.just(abc);
     }
 }
