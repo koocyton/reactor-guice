@@ -1,14 +1,8 @@
 package com.doopp.reactor.guice.common;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.WritableTypeId;
 import com.fasterxml.jackson.databind.*;
-import reactor.core.publisher.Mono;
-
-import javax.annotation.Nullable;
 import java.io.IOException;
-import java.text.SimpleDateFormat;
 
 public class JacksonHttpMessageConverter implements HttpMessageConverter {
 
