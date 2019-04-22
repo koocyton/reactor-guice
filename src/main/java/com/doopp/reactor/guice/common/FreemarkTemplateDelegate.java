@@ -4,6 +4,7 @@ import freemarker.template.*;
 import reactor.core.publisher.Mono;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.OutputStreamWriter;
 
 public class FreemarkTemplateDelegate implements TemplateDelegate {
@@ -12,20 +13,25 @@ public class FreemarkTemplateDelegate implements TemplateDelegate {
 
     // 输出模版
     @Override
+    public String template(Object handleObject, ModelMap modelMap, String templateName) throws IOException, TemplateException {
+        String controllerName = handleObject.getClass().getSimpleName();
+        String templateDirectory = controllerName.toLowerCase().substring(0, controllerName.length()-"handle".length());
+        this.configuration.setClassForTemplateLoading(handleObject.getClass(), "/template/" + templateDirectory);
+        Template template = this.configuration.getTemplate(templateName + ".html");
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        template.process(modelMap, new OutputStreamWriter(outputStream));
+        return outputStream.toString("UTF-8");
+    }
+
+    // 输出模版
+    @Override
     public Mono<String> templateMono(Object handleObject, ModelMap modelMap, String templateName) {
         return Mono.create(slink -> {
-            String controllerName = handleObject.getClass().getSimpleName();
-            String templateDirectory = controllerName.toLowerCase().substring(0, controllerName.length()-"handle".length());
-            this.configuration.setClassForTemplateLoading(handleObject.getClass(), "/template/" + templateDirectory);
             try {
-                Template template = this.configuration.getTemplate(templateName + ".html");
-                ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-                template.process(modelMap, new OutputStreamWriter(outputStream));
-                slink.success(outputStream.toString("UTF-8"));
+                slink.success(this.template(handleObject, modelMap, templateName));
             }
             catch(Exception e) {
-                e.printStackTrace();
-                slink.success(templateName);
+                slink.error(e);
             }
         });
     }

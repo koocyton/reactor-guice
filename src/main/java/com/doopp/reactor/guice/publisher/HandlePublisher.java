@@ -1,9 +1,9 @@
 package com.doopp.reactor.guice.publisher;
 
-
 import com.doopp.reactor.guice.annotation.RequestAttributeParam;
 import com.doopp.reactor.guice.annotation.UploadFilesParam;
 import com.doopp.reactor.guice.common.*;
+import freemarker.template.TemplateException;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.*;
 import io.netty.handler.codec.http.HttpMethod;
@@ -15,6 +15,7 @@ import reactor.netty.http.server.HttpServerResponse;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
+import java.io.IOException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.*;
@@ -29,70 +30,64 @@ public class HandlePublisher {
         this.httpMessageConverter = httpMessageConverter;
     }
 
+    public HttpMessageConverter getHttpMessageConverter() {
+        return this.httpMessageConverter;
+    }
+
     public void setTemplateDelegate(TemplateDelegate templateDelegate) {
         this.templateDelegate = templateDelegate;
     }
 
     public Mono<Object> sendResult(HttpServerRequest req, HttpServerResponse resp, Method method, Object handleObject, Object requestAttribute) {
-
+        // ModelMap
         ModelMap modelMap = new ModelMap();
-
+        // http content type
+        String contentType = methodProductsValue(method);
+        // result
         return this.invokeMethod(
                     req, resp, method, handleObject, (RequestAttribute) requestAttribute, modelMap
                 )
-                .map(o->{
-                    String contentType = MediaType.TEXT_HTML;
-                    if (method.isAnnotationPresent(Produces.class)) {
-                        String _contentType = "";
-                        for (String mediaType : method.getAnnotation(Produces.class).value()) {
-                            _contentType += (_contentType.equals("")) ? mediaType : "; " + mediaType;
-                        }
-                        contentType = _contentType.contains("charset") ? _contentType : _contentType + "; charset=UTF-8";
-                    }
+                .map(result->{
                     resp.addHeader(HttpHeaderNames.CONTENT_TYPE, contentType);
-                    return o;
+                    // binary
+                    if (result instanceof ByteBuf) {
+                        return result;
+                    }
+                    // String
+                    else if (result instanceof String && (contentType.contains(MediaType.TEXT_HTML) || contentType.contains(MediaType.TEXT_PLAIN))) {
+                        if (this.templateDelegate==null) {
+                            return result;
+                        }
+                        try {
+                            return this.templateDelegate.template(handleObject, modelMap, (String) result);
+                        }
+                        catch(IOException | TemplateException e) {
+                            return Mono.error(e).block();
+                        }
+                    }
+                    // json
+                    else {
+                        JsonResponse<?> jsonResponse = new JsonResponse<>(result);
+                        return (this.httpMessageConverter == null)
+                                    ? jsonResponse.toString()
+                                    : this.httpMessageConverter.toJson(jsonResponse);
+
+                    }
                 })
                 .onErrorMap(throwable -> {
-                    // get content type
-                    String contentType = resp.responseHeaders().get(HttpHeaderNames.CONTENT_TYPE);
                     // return error
                     if (contentType.contains(MediaType.TEXT_HTML) || contentType.contains(MediaType.TEXT_PLAIN)) {
+                        resp.addHeader(HttpHeaderNames.CONTENT_TYPE, contentType);
                         return new Exception(throwable.getMessage());
                     }
                     else {
+                        resp.addHeader(HttpHeaderNames.CONTENT_TYPE, MediaType.APPLICATION_JSON);
                         if (throwable instanceof ReactorGuiceException) {
                             return throwable;
                         }
                         else {
                             return new ReactorGuiceException(HttpResponseStatus.INTERNAL_SERVER_ERROR, throwable.getMessage());
                         }
-                    }
-                })
-                .flatMap(o -> {
-                    // get content type
-                    String contentType = resp.responseHeaders()
-                            .get(HttpHeaderNames.CONTENT_TYPE);
-                    // binary
-                    if (o instanceof ByteBuf) {
-                        return ByteBufMono.just((ByteBuf) o).map(s->{
-                            // resp.addHeader(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(s.readableBytes()));
-                            return s;
-                        });
-                    }
-                    // String
-                    else if (o instanceof String &&
-                            (contentType.contains(MediaType.TEXT_HTML) || contentType.contains(MediaType.TEXT_PLAIN))) {
-                        return (this.templateDelegate==null)
-                            ? Mono.just((String) o)
-                            : this.templateDelegate.templateMono(handleObject, modelMap, (String) o);
-                    }
-                    // json
-                    else {
-                        return Mono.just(o).map(JsonResponse::new).flatMap(oo->
-                            (this.httpMessageConverter==null)
-                                ? Mono.just(o.toString())
-                                : this.httpMessageConverter.toJson(oo)
-                        );
                     }
                 });
     }
@@ -104,21 +99,33 @@ public class HandlePublisher {
                     .aggregate()
                     .flatMap(byteBuf -> {
                         try {
-                            return (Mono<Object>) method.invoke(handleObject, getMethodParams(method, req, resp, requestAttribute, modelMap, byteBuf));
+                            return (Mono<Object>) method.invoke(handleObject, methodParams(method, req, resp, requestAttribute, modelMap, byteBuf));
                         } catch (Exception e) {
                             return Mono.error(e);
                         }
                     });
         } else {
             try {
-                return (Mono<Object>) method.invoke(handleObject, getMethodParams(method, req, resp, requestAttribute, modelMap, null));
+                return (Mono<Object>) method.invoke(handleObject, methodParams(method, req, resp, requestAttribute, modelMap, null));
             } catch (Exception e) {
                 return Mono.error(e);
             }
         }
     }
 
-    private Object[] getMethodParams(Method method, HttpServerRequest request, HttpServerResponse response, RequestAttribute requestAttribute, ModelMap modelMap, ByteBuf content) {
+    private String methodProductsValue(Method method) {
+        String contentType = MediaType.TEXT_HTML;
+        if (method.isAnnotationPresent(Produces.class)) {
+            String _contentType = "";
+            for (String mediaType : method.getAnnotation(Produces.class).value()) {
+                _contentType += (_contentType.equals("")) ? mediaType : "; " + mediaType;
+            }
+            contentType = _contentType.contains("charset") ? _contentType : _contentType + "; charset=UTF-8";
+        }
+        return contentType;
+    }
+
+    private Object[] methodParams(Method method, HttpServerRequest request, HttpServerResponse response, RequestAttribute requestAttribute, ModelMap modelMap, ByteBuf content) {
         ArrayList<Object> objectList = new ArrayList<>();
 
         Map<String, List<String>> questParams = new HashMap<>();
@@ -161,29 +168,29 @@ public class HandlePublisher {
             else if (parameter.getAnnotation(CookieParam.class) != null) {
                 String annotationKey = parameter.getAnnotation(CookieParam.class).value();
                 Collections.addAll(annotationVal, request.cookies().get(annotationKey).toString());
-                objectList.add(getParamTypeValue(annotationVal, parameterClazz));
+                objectList.add(paramTypeValue(annotationVal, parameterClazz));
             }
             // HeaderParam
             else if (parameter.getAnnotation(HeaderParam.class) != null) {
                 String annotationKey = parameter.getAnnotation(HeaderParam.class).value();
                 Collections.addAll(annotationVal, request.requestHeaders().get(annotationKey));
-                objectList.add(getParamTypeValue(annotationVal, parameterClazz));
+                objectList.add(paramTypeValue(annotationVal, parameterClazz));
             }
             // PathParam
             else if (parameter.getAnnotation(PathParam.class) != null) {
                 String annotationKey = parameter.getAnnotation(PathParam.class).value();
                 Collections.addAll(annotationVal, request.param(annotationKey));
-                objectList.add(getParamTypeValue(annotationVal, parameterClazz));
+                objectList.add(paramTypeValue(annotationVal, parameterClazz));
             }
             // QueryParam
             else if (parameter.getAnnotation(QueryParam.class) != null) {
                 String annotationKey = parameter.getAnnotation(QueryParam.class).value();
-                objectList.add(getParamTypeValue(questParams.get(annotationKey), parameterClazz));
+                objectList.add(paramTypeValue(questParams.get(annotationKey), parameterClazz));
             }
             // FormParam
             else if (parameter.getAnnotation(FormParam.class) != null) {
                 String annotationKey = parameter.getAnnotation(FormParam.class).value();
-                objectList.add(getParamTypeValue(formParams.get(annotationKey), parameterClazz));
+                objectList.add(paramTypeValue(formParams.get(annotationKey), parameterClazz));
             }
             // BeanParam
             else if (parameter.getAnnotation(BeanParam.class) != null) {
@@ -201,7 +208,7 @@ public class HandlePublisher {
         return objectList.toArray();
     }
 
-    private <T> T getParamTypeValue(List<String> value, Class<T> clazz) {
+    private <T> T paramTypeValue(List<String> value, Class<T> clazz) {
         // if value is null
         if (value == null) {
             return clazz.cast(null);

@@ -2,7 +2,7 @@ package com.doopp.reactor.guice.publisher;
 
 import com.doopp.reactor.guice.common.ReactorGuiceException;
 
-class JsonResponse<T> {
+public class JsonResponse<T> {
 
     private int err_code = 0;
 

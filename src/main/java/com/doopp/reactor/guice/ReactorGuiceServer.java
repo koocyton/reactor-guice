@@ -200,16 +200,22 @@ public class ReactorGuiceServer {
             .onErrorResume(throwable -> {
                 if (throwable instanceof ReactorGuiceException) {
                     resp.status(((ReactorGuiceException) throwable).getCode());
+                    JsonResponse<?> jsonResponse = new JsonResponse<>(throwable);
+                    return Mono.just(handlePublisher
+                            .getHttpMessageConverter()
+                            .toJson(jsonResponse));
                 }
                 else {
                     resp.status(HttpResponseStatus.INTERNAL_SERVER_ERROR);
+                    return Mono.just(throwable.getMessage());
                 }
-                return Mono.just(throwable.getMessage());
             })
-            .flatMap(o -> (o instanceof String)
-                    ? resp.sendString(Mono.just((String) o)).then()
-                    : resp.sendObject(Mono.just(o)).then()
-            );
+            .flatMap(o -> {
+                System.out.println(o);
+                return (o instanceof String)
+                                ? resp.sendString(Mono.just((String) o)).then()
+                                : resp.sendObject(Mono.just(o)).then();
+            });
     }
 
 

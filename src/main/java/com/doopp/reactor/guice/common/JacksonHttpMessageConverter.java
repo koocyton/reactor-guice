@@ -6,6 +6,7 @@ import com.fasterxml.jackson.core.type.WritableTypeId;
 import com.fasterxml.jackson.databind.*;
 import reactor.core.publisher.Mono;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 
@@ -33,27 +34,23 @@ public class JacksonHttpMessageConverter implements HttpMessageConverter {
     }
 
     @Override
-    public Mono<String> toJson(Object object) {
-        return Mono.create(sink->{
-            try {
-                sink.success(this.objectMapper.writeValueAsString(object));
-            }
-            catch(JsonProcessingException e) {
-                sink.error(e);
-            }
-        });
+    public String toJson(Object object) {
+        try {
+            return this.objectMapper.writeValueAsString(object);
+        }
+        catch(JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
-    public <T> Mono<T> fromJson(String json, Class<T> clazz) {
-        return Mono.create(sink->{
-            try {
-                sink.success(this.objectMapper.readValue(json, clazz));
-            }
-            catch(IOException e) {
-                sink.error(e);
-            }
-        });
+    public <T> T fromJson(String json, Class<T> clazz) {
+        try {
+            return this.objectMapper.readValue(json, clazz);
+        }
+        catch(IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
 

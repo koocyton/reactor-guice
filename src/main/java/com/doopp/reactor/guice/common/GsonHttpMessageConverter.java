@@ -3,7 +3,6 @@ package com.doopp.reactor.guice.common;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.LongSerializationPolicy;
-import reactor.core.publisher.Mono;
 
 public class GsonHttpMessageConverter implements HttpMessageConverter {
 
@@ -32,13 +31,13 @@ public class GsonHttpMessageConverter implements HttpMessageConverter {
     }
 
     @Override
-    public Mono<String> toJson(Object object) {
-        return Mono.just(this.gson.toJson(object));
+    public String toJson(Object object) {
+        return this.gson.toJson(object);
     }
 
     @Override
-    public <T> Mono<T> fromJson(String json, Class<T> clazz) {
-        return Mono.just(this.gson.fromJson(json, clazz));
+    public <T> T fromJson(String json, Class<T> clazz) {
+        return this.gson.fromJson(json, clazz);
     }
 }
 
