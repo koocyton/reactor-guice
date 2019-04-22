@@ -11,7 +11,7 @@ public interface ReactorGuiceFilter {
     default boolean isNeedFilter(String uri, String[] notNeedFilters) {
         boolean needFilter = true;
         for (String notNeedFilter : notNeedFilters) {
-            if (uri.length() >= notNeedFilter.length() && uri.substring(0, notNeedFilter.length()).equals(notNeedFilter)) {
+            if (uri.length() >= notNeedFilter.length() && uri.startsWith(notNeedFilter)) {
                 needFilter = false;
                 break;
             }

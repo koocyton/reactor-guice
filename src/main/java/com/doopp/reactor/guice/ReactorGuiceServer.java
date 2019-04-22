@@ -18,7 +18,6 @@ import reactor.netty.http.server.HttpServerResponse;
 import reactor.netty.http.server.HttpServerRoutes;
 
 import javax.ws.rs.*;
-import javax.ws.rs.core.MediaType;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -198,36 +197,19 @@ public class ReactorGuiceServer {
         // result
         return doFilter(req, resp, new RequestAttribute())
             .flatMap(handle)
-            .onErrorMap(throwable -> {
-                return (throwable instanceof ReactorGuiceException)
-                    ? throwable
-                    : new ReactorGuiceException(HttpResponseStatus.INTERNAL_SERVER_ERROR, throwable.getMessage());
-            })
-            .flatMap(o -> {
-                if (o instanceof ReactorGuiceException) {
-                    ReactorGuiceException ke = (ReactorGuiceException) o;
-                    return resp
-                        .addHeader(HttpHeaderNames.CONTENT_TYPE, MediaType.TEXT_HTML)
-                        .status(ke.getCode())
-                        .sendString(
-                            Mono.just(ke.getMessage())
-                        ).then();
-                } else if (o instanceof String) {
-                    HttpResponseStatus status = (resp.status()==null) ? HttpResponseStatus.OK : resp.status();
-                    return resp
-                        .status(status)
-                        .sendString(
-                            Mono.just((String) o)
-                        ).then();
-                } else {
-                    HttpResponseStatus status = (resp.status()==null) ? HttpResponseStatus.OK : resp.status();
-                    return resp
-                        .status(status)
-                        .sendObject(
-                            Mono.just(o)
-                        ).then();
+            .onErrorResume(throwable -> {
+                if (throwable instanceof ReactorGuiceException) {
+                    resp.status(((ReactorGuiceException) throwable).getCode());
                 }
-            });
+                else {
+                    resp.status(HttpResponseStatus.INTERNAL_SERVER_ERROR);
+                }
+                return Mono.just(throwable.getMessage());
+            })
+            .flatMap(o -> (o instanceof String)
+                    ? resp.sendString(Mono.just((String) o)).then()
+                    : resp.sendObject(Mono.just(o)).then()
+            );
     }
 
 
@@ -240,8 +222,10 @@ public class ReactorGuiceServer {
      * @return Mono
      */
     private Mono<Object> doFilter(HttpServerRequest req, HttpServerResponse resp, RequestAttribute requestAttribute) {
+        // loop filter map
         for (String key : this.filters.keySet()) {
-            if (req.uri().length() >= key.length() && req.uri().substring(0, key.length()).equals(key)) {
+            // choice filter
+            if (req.uri().length() >= key.length() && req.uri().startsWith(key)) {
                 return this.filters.get(key).doFilter(req, resp, requestAttribute);
             }
         }

@@ -36,12 +36,11 @@ public class HandlePublisher {
     public Mono<Object> sendResult(HttpServerRequest req, HttpServerResponse resp, Method method, Object handleObject, Object requestAttribute) {
 
         ModelMap modelMap = new ModelMap();
-        return Mono.just(new ModelMap())
-                .flatMap(m ->
-                    this.invokeMethod(req, resp, method, handleObject, (RequestAttribute) requestAttribute, modelMap)
+
+        return this.invokeMethod(
+                    req, resp, method, handleObject, (RequestAttribute) requestAttribute, modelMap
                 )
-                .flatMap(o -> {
-                    // content type
+                .map(o->{
                     String contentType = MediaType.TEXT_HTML;
                     if (method.isAnnotationPresent(Produces.class)) {
                         String _contentType = "";
@@ -50,9 +49,29 @@ public class HandlePublisher {
                         }
                         contentType = _contentType.contains("charset") ? _contentType : _contentType + "; charset=UTF-8";
                     }
-
                     resp.addHeader(HttpHeaderNames.CONTENT_TYPE, contentType);
-
+                    return o;
+                })
+                .onErrorMap(throwable -> {
+                    // get content type
+                    String contentType = resp.responseHeaders().get(HttpHeaderNames.CONTENT_TYPE);
+                    // return error
+                    if (contentType.contains(MediaType.TEXT_HTML) || contentType.contains(MediaType.TEXT_PLAIN)) {
+                        return new Exception(throwable.getMessage());
+                    }
+                    else {
+                        if (throwable instanceof ReactorGuiceException) {
+                            return throwable;
+                        }
+                        else {
+                            return new ReactorGuiceException(HttpResponseStatus.INTERNAL_SERVER_ERROR, throwable.getMessage());
+                        }
+                    }
+                })
+                .flatMap(o -> {
+                    // get content type
+                    String contentType = resp.responseHeaders()
+                            .get(HttpHeaderNames.CONTENT_TYPE);
                     // binary
                     if (o instanceof ByteBuf) {
                         return ByteBufMono.just((ByteBuf) o).map(s->{
@@ -79,7 +98,7 @@ public class HandlePublisher {
     }
 
     private Mono<Object> invokeMethod(HttpServerRequest req, HttpServerResponse resp, Method method, Object handleObject, RequestAttribute requestAttribute, ModelMap modelMap) {
-        if (req.method() == HttpMethod.POST) {
+        if (req.method() == HttpMethod.POST || req.method() == HttpMethod.PUT) {
             return req
                     .receive()
                     .aggregate()
@@ -183,6 +202,7 @@ public class HandlePublisher {
     }
 
     private <T> T getParamTypeValue(List<String> value, Class<T> clazz) {
+        // if value is null
         if (value == null) {
             return clazz.cast(null);
         }
