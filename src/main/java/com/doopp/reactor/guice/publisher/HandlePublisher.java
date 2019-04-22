@@ -3,7 +3,6 @@ package com.doopp.reactor.guice.publisher;
 import com.doopp.reactor.guice.annotation.RequestAttributeParam;
 import com.doopp.reactor.guice.annotation.UploadFilesParam;
 import com.doopp.reactor.guice.common.*;
-import freemarker.template.TemplateException;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.*;
 import io.netty.handler.codec.http.HttpMethod;
@@ -14,7 +13,6 @@ import reactor.netty.http.server.HttpServerResponse;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
-import java.io.IOException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.*;
@@ -57,12 +55,7 @@ public class HandlePublisher {
                         if (this.templateDelegate==null) {
                             return result;
                         }
-                        try {
-                            return this.templateDelegate.template(handleObject, modelMap, (String) result);
-                        }
-                        catch(IOException | TemplateException e) {
-                            return Mono.error(e).block();
-                        }
+                        return this.templateDelegate.templateMono(handleObject, modelMap, (String) result).block();
                     }
                     // json
                     else {
