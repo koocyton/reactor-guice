@@ -2,6 +2,40 @@
 
 Reactor-guice integrates the framework of Google Guice and Reactor-netty
 
+#### Milestone
+``` html
+0.0.3 Support annotations GET POST PUT DELETE
+0.0.3 Support annotations Products PATH
+0.0.3 Static File Support
+0.0.3 Support Websocket
+0.0.4 Custom filter by uri
+0.0.5 index.html in the default output directory
+0.0.5 Support for custom templates lib
+      with gson and Jackson convert
+0.0.5 Support for custom json lib
+      with freeemark convert
+      and modelmap for template
+0.0.5 you can upload files
+0.0.6 POST can be an array
+
+support forward & redirect (like spring)
+        return redirect:/abc
+        return forward:abc
+support protobuf
+support udp server
+support api gateway model
+maybe use Jersey to execute dispatch
+```
+
+#### Bugs
+``` html
+0.0.6 Failed to return errors accurately according to the type of request, 
+      such as JSON in case of request exception of static file. 
+      The error returned by the filter should be determined according 
+      to the type of return that the filter subsequently executes. 
+      You may need to leave response to publisher, 
+      but it's not very beautiful.
+```
 
 ### 1. import reactor-guice
 
@@ -10,13 +44,13 @@ Reactor-guice integrates the framework of Google Guice and Reactor-netty
 <dependency>
     <groupId>com.doopp</groupId>
     <artifactId>reactor-guice</artifactId>
-    <version>0.0.6</version>
+    <version>0.0.6-SNAPSHOT</version>
 </dependency>
 ```
 
 #### gradle
 ```
-compile 'com.doopp:reactor-guice:0.0.6'
+compile 'com.doopp:reactor-guice:0.0.6-SNAPSHOT'
 ```
 
 #### use Local Maven 
