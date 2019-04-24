@@ -1,4 +1,4 @@
-package com.doopp.reactor.guice.common;
+package com.doopp.reactor.guice.json;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;

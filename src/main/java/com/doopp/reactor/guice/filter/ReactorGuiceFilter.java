@@ -1,5 +1,6 @@
-package com.doopp.reactor.guice.common;
+package com.doopp.reactor.guice.filter;
 
+import com.doopp.reactor.guice.common.RequestAttribute;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.http.server.HttpServerResponse;

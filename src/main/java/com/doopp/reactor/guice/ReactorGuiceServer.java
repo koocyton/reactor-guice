@@ -1,7 +1,10 @@
 package com.doopp.reactor.guice;
 
 import com.doopp.reactor.guice.common.*;
+import com.doopp.reactor.guice.filter.ReactorGuiceFilter;
+import com.doopp.reactor.guice.json.HttpMessageConverter;
 import com.doopp.reactor.guice.publisher.*;
+import com.doopp.reactor.guice.view.TemplateDelegate;
 import com.doopp.reactor.guice.websocket.AbstractWebSocketServerHandle;
 import com.doopp.reactor.guice.websocket.WebSocketServerHandle;
 import com.google.inject.Injector;

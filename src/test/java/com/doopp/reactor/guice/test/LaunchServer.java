@@ -1,9 +1,8 @@
 package com.doopp.reactor.guice.test;
 
 import com.doopp.reactor.guice.ReactorGuiceServer;
-import com.doopp.reactor.guice.common.FreemarkTemplateDelegate;
-import com.doopp.reactor.guice.common.GsonHttpMessageConverter;
-import com.doopp.reactor.guice.common.JacksonHttpMessageConverter;
+import com.doopp.reactor.guice.view.FreemarkTemplateDelegate;
+import com.doopp.reactor.guice.json.JacksonHttpMessageConverter;
 import com.google.inject.*;
 import com.google.inject.name.Names;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;

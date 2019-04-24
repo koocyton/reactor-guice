@@ -1,4 +1,4 @@
-package com.doopp.reactor.guice.common;
+package com.doopp.reactor.guice.view;
 
 import java.util.LinkedHashMap;
 

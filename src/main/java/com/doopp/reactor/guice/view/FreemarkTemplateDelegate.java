@@ -1,4 +1,4 @@
-package com.doopp.reactor.guice.common;
+package com.doopp.reactor.guice.view;
 
 import freemarker.template.*;
 import reactor.core.publisher.Mono;
