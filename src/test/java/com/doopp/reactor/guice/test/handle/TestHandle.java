@@ -1,7 +1,7 @@
 package com.doopp.reactor.guice.test.handle;
 
 import com.doopp.reactor.guice.view.ModelMap;
-import com.doopp.reactor.guice.common.ReactorGuiceException;
+import com.doopp.reactor.guice.ReactorGuiceException;
 import com.doopp.reactor.guice.test.entity.Point;
 import com.doopp.reactor.guice.test.service.MapApiService;
 import com.doopp.reactor.guice.test.service.TestService;

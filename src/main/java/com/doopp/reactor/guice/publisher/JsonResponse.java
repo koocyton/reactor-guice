@@ -1,6 +1,6 @@
 package com.doopp.reactor.guice.publisher;
 
-import com.doopp.reactor.guice.common.ReactorGuiceException;
+import com.doopp.reactor.guice.ReactorGuiceException;
 
 public class JsonResponse<T> {
 

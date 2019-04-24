@@ -1,7 +1,7 @@
 package com.doopp.reactor.guice.test;
 
 import com.doopp.reactor.guice.filter.ReactorGuiceFilter;
-import com.doopp.reactor.guice.common.RequestAttribute;
+import com.doopp.reactor.guice.RequestAttribute;
 import com.doopp.reactor.guice.test.service.TestService;
 import com.google.inject.Inject;
 import reactor.core.publisher.Mono;

@@ -1,6 +1,6 @@
 package com.doopp.reactor.guice.publisher;
 
-import com.doopp.reactor.guice.common.ReactorGuiceException;
+import com.doopp.reactor.guice.ReactorGuiceException;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.EmptyByteBuf;

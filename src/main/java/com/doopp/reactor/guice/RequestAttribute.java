@@ -1,4 +1,4 @@
-package com.doopp.reactor.guice.common;
+package com.doopp.reactor.guice;
 
 import io.netty.util.AttributeKey;
 

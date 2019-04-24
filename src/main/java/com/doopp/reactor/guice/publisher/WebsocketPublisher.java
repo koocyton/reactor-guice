@@ -1,6 +1,6 @@
 package com.doopp.reactor.guice.publisher;
 
-import com.doopp.reactor.guice.common.RequestAttribute;
+import com.doopp.reactor.guice.RequestAttribute;
 import com.doopp.reactor.guice.websocket.WebSocketServerHandle;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http.websocketx.*;
