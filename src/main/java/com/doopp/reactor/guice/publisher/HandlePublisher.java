@@ -59,7 +59,7 @@ public class HandlePublisher {
                         if (this.templateDelegate==null) {
                             return result;
                         }
-                        return this.templateDelegate.templateMono(handleObject, modelMap, (String) result).block();
+                        return this.templateDelegate.template(handleObject, modelMap, (String) result);
                     }
                     // json
                     else {
