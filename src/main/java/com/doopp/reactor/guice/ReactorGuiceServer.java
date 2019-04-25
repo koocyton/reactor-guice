@@ -1,6 +1,5 @@
 package com.doopp.reactor.guice;
 
-import com.doopp.reactor.guice.filter.ReactorGuiceFilter;
 import com.doopp.reactor.guice.json.HttpMessageConverter;
 import com.doopp.reactor.guice.publisher.*;
 import com.doopp.reactor.guice.view.TemplateDelegate;
@@ -20,6 +19,7 @@ import reactor.netty.http.server.HttpServerResponse;
 import reactor.netty.http.server.HttpServerRoutes;
 
 import javax.ws.rs.*;
+import javax.ws.rs.core.MediaType;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -45,7 +45,7 @@ public class ReactorGuiceServer {
 
     private Injector injector;
 
-    private final Map<String, ReactorGuiceFilter> filters = new HashMap<>();
+    private final Map<String, Filter> filters = new HashMap<>();
 
     private final Set<String> handlePackages = new HashSet<>();
 
@@ -72,7 +72,7 @@ public class ReactorGuiceServer {
         return this;
     }
 
-    public ReactorGuiceServer addFilter(String path, Class<? extends ReactorGuiceFilter> clazz) {
+    public ReactorGuiceServer addFilter(String path, Class<? extends Filter> clazz) {
         if (this.injector!=null) {
             this.filters.put(path, this.injector.getInstance(clazz));
         }
@@ -200,18 +200,20 @@ public class ReactorGuiceServer {
         return doFilter(req, resp, new RequestAttribute())
             .flatMap(handle)
             .onErrorResume(throwable -> {
-                if (throwable instanceof ReactorGuiceException) {
-                    resp.status(((ReactorGuiceException) throwable).getCode());
+                if (throwable instanceof StatusMessageException) {
+                    resp.status(((StatusMessageException) throwable).getCode());
+                    resp.addHeader(HttpHeaderNames.CONTENT_TYPE, MediaType.APPLICATION_JSON);
                     return Mono.just(
                         handlePublisher
                             .getHttpMessageConverter()
                             .toJson(
-                                new JsonResponse<>(throwable)
+                                new StatusMessageResponse(throwable)
                             )
                     );
                 }
                 else {
                     resp.status(HttpResponseStatus.INTERNAL_SERVER_ERROR);
+                    resp.addHeader(HttpHeaderNames.CONTENT_TYPE, MediaType.TEXT_PLAIN);
                     return Mono.just(throwable.getMessage());
                 }
             })

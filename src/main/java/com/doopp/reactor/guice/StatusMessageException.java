@@ -2,21 +2,21 @@ package com.doopp.reactor.guice;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
 
-public class ReactorGuiceException extends Exception {
+public class StatusMessageException extends Exception {
 
     private int errorCode = 0;
 
-    public ReactorGuiceException(int errorCode, String errorMessage) {
+    public StatusMessageException(int errorCode, String errorMessage) {
         super(errorMessage);
         this.errorCode = errorCode;
     }
 
-    public ReactorGuiceException(HttpResponseStatus status, String errorMessage) {
+    public StatusMessageException(HttpResponseStatus status, String errorMessage) {
         super(errorMessage);
         this.errorCode = status.code();
     }
 
-    public ReactorGuiceException(HttpResponseStatus status) {
+    public StatusMessageException(HttpResponseStatus status) {
         super(status.reasonPhrase());
         this.errorCode = status.code();
     }

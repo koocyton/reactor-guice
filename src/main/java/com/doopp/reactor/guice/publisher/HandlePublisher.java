@@ -1,6 +1,7 @@
 package com.doopp.reactor.guice.publisher;
 
-import com.doopp.reactor.guice.ReactorGuiceException;
+import com.doopp.reactor.guice.StatusMessageResponse;
+import com.doopp.reactor.guice.StatusMessageException;
 import com.doopp.reactor.guice.RequestAttribute;
 import com.doopp.reactor.guice.annotation.RequestAttributeParam;
 import com.doopp.reactor.guice.annotation.UploadFilesParam;
@@ -63,10 +64,10 @@ public class HandlePublisher {
                     }
                     // json
                     else {
-                        JsonResponse<?> jsonResponse = new JsonResponse<>(result);
+                        StatusMessageResponse statusMessageResponse = new StatusMessageResponse(result);
                         return (this.httpMessageConverter == null)
-                                    ? jsonResponse.toString()
-                                    : this.httpMessageConverter.toJson(jsonResponse);
+                                    ? statusMessageResponse.toString()
+                                    : this.httpMessageConverter.toJson(statusMessageResponse);
 
                     }
                 })
@@ -78,11 +79,11 @@ public class HandlePublisher {
                     }
                     else {
                         resp.addHeader(HttpHeaderNames.CONTENT_TYPE, MediaType.APPLICATION_JSON);
-                        if (throwable instanceof ReactorGuiceException) {
+                        if (throwable instanceof StatusMessageException) {
                             return throwable;
                         }
                         else {
-                            return new ReactorGuiceException(HttpResponseStatus.INTERNAL_SERVER_ERROR, throwable.getMessage());
+                            return new StatusMessageException(HttpResponseStatus.INTERNAL_SERVER_ERROR, throwable.getMessage());
                         }
                     }
                 });

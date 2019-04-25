@@ -47,7 +47,7 @@ public class LaunchServer {
             .setHttpMessageConverter(new JacksonHttpMessageConverter())
             .setTemplateDelegate(new FreemarkTemplateDelegate())
             .handlePackages("com.doopp.reactor.guice.test.handle")
-            .addFilter("/", Filter.class)
+            .addFilter("/", TestFilter.class)
             .launch();
     }
 

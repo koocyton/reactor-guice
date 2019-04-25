@@ -1,6 +1,6 @@
 package com.doopp.reactor.guice.publisher;
 
-import com.doopp.reactor.guice.ReactorGuiceException;
+import com.doopp.reactor.guice.StatusMessageException;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.EmptyByteBuf;
@@ -34,7 +34,7 @@ public class StaticFilePublisher {
 
             URL requestResource = this.getClass().getResource(requirePath);
             if (requestResource==null) {
-                sink.error(new ReactorGuiceException(HttpResponseStatus.NOT_FOUND));
+                sink.error(new StatusMessageException(HttpResponseStatus.NOT_FOUND));
                 return;
             }
 
@@ -76,7 +76,7 @@ public class StaticFilePublisher {
                 sink.success(buf);
             }
             catch (IOException e) {
-                sink.error(new ReactorGuiceException(HttpResponseStatus.INTERNAL_SERVER_ERROR, e.getMessage()));
+                sink.error(new StatusMessageException(HttpResponseStatus.INTERNAL_SERVER_ERROR, e.getMessage()));
             }
 
             // close file input stream

@@ -1,20 +1,18 @@
-package com.doopp.reactor.guice.publisher;
+package com.doopp.reactor.guice;
 
-import com.doopp.reactor.guice.ReactorGuiceException;
-
-public class JsonResponse<T> {
+public class StatusMessageResponse {
 
     private int err_code = 0;
 
     private String err_msg = "";
 
-    private T data;
+    private Object data;
 
-    public T getData() {
+    public Object getData() {
         return data;
     }
 
-    public void setData(T data) {
+    public void setData(Object data) {
         this.data = data;
     }
 
@@ -34,9 +32,9 @@ public class JsonResponse<T> {
         this.err_msg = err_msg;
     }
 
-    public JsonResponse(T data) {
-        if (data instanceof ReactorGuiceException) {
-            ReactorGuiceException _data = (ReactorGuiceException) data;
+    public StatusMessageResponse(Object data) {
+        if (data instanceof StatusMessageException) {
+            StatusMessageException _data = (StatusMessageException) data;
             this.setErr_code(_data.getCode());
             this.setErr_msg(_data.getMessage());
         }
@@ -48,5 +46,14 @@ public class JsonResponse<T> {
         else {
             this.data = data;
         }
+    }
+
+    public String toString()
+    {
+        return "{" +
+                "\"err_code\":"+this.err_code+", " +
+                "\"err_msg\":\""+this.err_msg+"\"" +
+                "\"data\":\""+this.data.toString()+"\"" +
+        "}";
     }
 }
