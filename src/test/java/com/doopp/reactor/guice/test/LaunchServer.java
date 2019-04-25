@@ -3,6 +3,7 @@ package com.doopp.reactor.guice.test;
 import com.doopp.reactor.guice.ReactorGuiceServer;
 import com.doopp.reactor.guice.view.FreemarkTemplateDelegate;
 import com.doopp.reactor.guice.json.JacksonHttpMessageConverter;
+import com.doopp.reactor.guice.view.ThymeleafTemplateDelegate;
 import com.google.inject.*;
 import com.google.inject.name.Names;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
@@ -46,6 +47,7 @@ public class LaunchServer {
             .injector(injector)
             .setHttpMessageConverter(new JacksonHttpMessageConverter())
             .setTemplateDelegate(new FreemarkTemplateDelegate())
+            // .setTemplateDelegate(new ThymeleafTemplateDelegate())
             .handlePackages("com.doopp.reactor.guice.test.handle")
             .addFilter("/", TestFilter.class)
             .launch();

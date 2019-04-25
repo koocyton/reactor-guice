@@ -123,6 +123,13 @@
             <version>2.3.28</version>
         </dependency>
 
+        <!-- thymeleaf template -->
+        <dependency>
+            <groupId>org.thymeleaf</groupId>
+            <artifactId>thymeleaf</artifactId>
+            <version>3.0.11.RELEASE</version>
+        </dependency>
+
         <!-- Junit -->
         <dependency>
             <groupId>junit</groupId>
