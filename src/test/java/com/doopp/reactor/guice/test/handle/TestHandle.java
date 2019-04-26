@@ -79,4 +79,11 @@ public class TestHandle {
     public Mono<String[]> testParams(@FormParam("test") String[] abc) {
         return abc==null ? Mono.error(new StatusMessageException(500, "abc must init")) : Mono.just(abc);
     }
+
+    @GET
+    @Path("/test/redirect")
+    @Produces(MediaType.TEXT_HTML)
+    public Mono<String> testRedirect() {
+        return Mono.just("redirect:/kreactor/test/json");
+    }
 }

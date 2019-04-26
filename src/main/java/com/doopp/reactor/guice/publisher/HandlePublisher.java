@@ -51,6 +51,11 @@ public class HandlePublisher {
                 )
                 .map(result->{
                     resp.addHeader(HttpHeaderNames.CONTENT_TYPE, contentType);
+                    if (result instanceof String && ((String) result).startsWith("redirect:")) {
+                        String uri = ((String) result).substring(9);
+                        return resp.sendRedirect(uri);
+                    }
+
                     // binary
                     if (result instanceof ByteBuf) {
                         return result;

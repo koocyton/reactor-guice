@@ -40,6 +40,7 @@ public class LaunchServer {
         System.out.println(">>> http://"+host+":"+port+"/kreactor/test/html/123");
         System.out.println(">>> http://"+host+":"+port+"/kreactor/test/image");
         System.out.println(">>> http://"+host+":"+port+"/kreactor/test/points");
+        System.out.println(">>> http://"+host+":"+port+"/kreactor/test/redirect");
         System.out.println(">>> http://"+host+":"+port+"/kreactor/test/params\n");
 
         ReactorGuiceServer.create()

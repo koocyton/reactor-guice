@@ -13,6 +13,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.netty.DisposableServer;
+import reactor.netty.NettyOutbound;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.http.server.HttpServerResponse;
@@ -200,6 +201,7 @@ public class ReactorGuiceServer {
         return doFilter(req, resp, new RequestAttribute())
             .flatMap(handle)
             .onErrorMap(throwable -> {
+                // if handle @Products is json  , RETURN StatusMessageException
                 if (handlePublisher.methodProductsValue(method).contains(MediaType.APPLICATION_JSON)) {
                     if (throwable instanceof StatusMessageException) {
                         resp.status(((StatusMessageException) throwable).getCode());
@@ -212,6 +214,7 @@ public class ReactorGuiceServer {
                         return new StatusMessageException(HttpResponseStatus.INTERNAL_SERVER_ERROR, throwable.getMessage());
                     }
                 }
+                // else return other Exception
                 else {
                     if (throwable instanceof StatusMessageException) {
                         resp.status(((StatusMessageException) throwable).getCode());
@@ -226,6 +229,7 @@ public class ReactorGuiceServer {
                 }
             })
             .onErrorResume(throwable -> {
+                // is json
                 if (throwable instanceof StatusMessageException) {
                     return Mono.just(
                         handlePublisher
@@ -235,14 +239,19 @@ public class ReactorGuiceServer {
                             )
                     );
                 }
+                // string
                 else {
                     return Mono.just(throwable.getMessage());
                 }
             })
-            .flatMap(o -> (o instanceof String)
-                ? resp.sendString(Mono.just((String) o)).then()
-                : resp.sendObject(Mono.just(o)).then()
-            );
+            .flatMap(o -> {
+                if (o instanceof Mono) {
+                    return (Mono<Void>) o;
+                }
+                return (o instanceof String)
+                                ? resp.sendString(Mono.just((String) o)).then()
+                                : resp.sendObject(Mono.just(o)).then();
+            });
     }
 
 
