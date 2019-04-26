@@ -17,10 +17,8 @@ Reactor-guice integrates the framework of Google Guice and Reactor-netty
       and modelmap for template
 0.0.5 you can upload files
 0.0.6 POST can be an array
+0.0.7 use redirect:/** to redirect
 
-support forward & redirect (like spring)
-        return redirect:/abc
-        return forward:abc
 support protobuf
 support udp server
 support api gateway model
