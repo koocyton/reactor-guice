@@ -25,16 +25,6 @@ support api gateway model
 maybe use Jersey to execute dispatch
 ```
 
-#### Bugs
-``` html
-0.0.6 Failed to return errors accurately according to the type of request, 
-      such as JSON in case of request exception of static file. 
-      The error returned by the filter should be determined according 
-      to the type of return that the filter subsequently executes. 
-      You may need to leave response to publisher, 
-      but it's not very beautiful.
-```
-
 ### 1. import reactor-guice
 
 #### maven
@@ -42,13 +32,13 @@ maybe use Jersey to execute dispatch
 <dependency>
     <groupId>com.doopp</groupId>
     <artifactId>reactor-guice</artifactId>
-    <version>0.0.6-SNAPSHOT</version>
+    <version>0.0.7-SNAPSHOT</version>
 </dependency>
 ```
 
 #### gradle
 ```
-compile 'com.doopp:reactor-guice:0.0.6-SNAPSHOT'
+compile 'com.doopp:reactor-guice:0.0.7-SNAPSHOT'
 ```
 
 #### use Local Maven 
@@ -57,12 +47,12 @@ mvn clean
 
 mvn package
 
-mvn install:install-file -Dfile=target/reactor-guice-0.0.6.jar -DgroupId=com.doopp.local -DartifactId=reactor-guice -Dversion=0.0.6 -Dpackaging=jar
+mvn install:install-file -Dfile=target/reactor-guice-0.0.7.jar -DgroupId=com.doopp.local -DartifactId=reactor-guice -Dversion=0.0.7 -Dpackaging=jar
 
 <dependency>
     <groupId>com.doopp.local</groupId>
     <artifactId>reactor-guice</artifactId>
-    <version>0.0.6</version>
+    <version>0.0.7</version>
 </dependency>
 ```
 
@@ -77,7 +67,8 @@ ReactorGuiceServer.create()
     .setHttpMessageConverter(new JacksonHttpMessageConverter())
     .setTemplateDelegate(new FreemarkTemplateDelegate())
     .handlePackages("com.doopp.reactor.guice.test.handle")
-    .addFilter("/", Filter.class)
+    .addFilter("/", TestFilter.class)
+    .printError(true)
     .launch();
 ```
 
