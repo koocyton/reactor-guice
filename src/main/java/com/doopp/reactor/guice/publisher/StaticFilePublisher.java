@@ -74,6 +74,7 @@ public class StaticFilePublisher {
                 resp.addHeader(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(buf.readableBytes()));
                 resp.addHeader(HttpHeaderNames.CONTENT_TYPE, contentType(requirePath.substring(requirePath.lastIndexOf(".") + 1))+"; charset=UTF-8");
                 sink.success(buf);
+                buf.release();
             }
             catch (IOException e) {
                 sink.error(new StatusMessageException(HttpResponseStatus.INTERNAL_SERVER_ERROR, e.getMessage()));
