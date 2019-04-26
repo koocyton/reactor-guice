@@ -46,6 +46,8 @@ public class ReactorGuiceServer {
 
     private Injector injector;
 
+    private boolean printError = false;
+
     private final Map<String, Filter> filters = new HashMap<>();
 
     private final Set<String> handlePackages = new HashSet<>();
@@ -89,6 +91,11 @@ public class ReactorGuiceServer {
     public ReactorGuiceServer setTemplateDelegate(TemplateDelegate templateDelegate) {
         assert templateDelegate!=null : "A TemplateDelegate instance is required";
         handlePublisher.setTemplateDelegate(templateDelegate);
+        return this;
+    }
+
+    public ReactorGuiceServer printError(boolean printError) {
+        this.printError = printError;
         return this;
     }
 
@@ -201,6 +208,9 @@ public class ReactorGuiceServer {
         return doFilter(req, resp, new RequestAttribute())
             .flatMap(handle)
             .onErrorMap(throwable -> {
+                if (this.printError) {
+                    throwable.printStackTrace();
+                }
                 // if handle @Products is json  , RETURN StatusMessageException
                 if (handlePublisher.methodProductsValue(method).contains(MediaType.APPLICATION_JSON)) {
                     if (throwable instanceof StatusMessageException) {
