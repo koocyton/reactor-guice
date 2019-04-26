@@ -135,7 +135,7 @@ public class ReactorGuiceServer {
                 // if websocket
                 if (AbstractWebSocketServerHandle.class.isAssignableFrom(handleObject.getClass()) && pathAnnotation != null) {
                     System.out.println("    WS " + rootPath + " → " + handleClassName);
-                    routes.get(rootPath, (req, resp) -> httpPublisher(req, resp, o ->
+                    routes.get(rootPath, (req, resp) -> httpPublisher(req, resp, null, o ->
                             websocketPublisher.sendMessage(req, resp, (WebSocketServerHandle) handleObject, o)
                     ));
                     continue;
@@ -150,28 +150,28 @@ public class ReactorGuiceServer {
                         // GET
                         if (method.isAnnotationPresent(GET.class)) {
                             System.out.println("   GET " + requestPath + " → " + handleClassName + ":" + method.getName());
-                            routes.get(requestPath, (req, resp) -> httpPublisher(req, resp, o ->
+                            routes.get(requestPath, (req, resp) -> httpPublisher(req, resp, method, o ->
                                 handlePublisher.sendResult(req, resp, method, handleObject, o)
                             ));
                         }
                         // POST
                         else if (method.isAnnotationPresent(POST.class)) {
                             System.out.println("  POST " + requestPath + " → " + handleClassName + ":" + method.getName());
-                            routes.post(requestPath, (req, resp) -> httpPublisher(req, resp, o ->
+                            routes.post(requestPath, (req, resp) -> httpPublisher(req, resp, method, o ->
                                 handlePublisher.sendResult(req, resp, method, handleObject, o)
                             ));
                         }
                         // DELETE
                         else if (method.isAnnotationPresent(DELETE.class)) {
                             System.out.println("DELETE " + requestPath + " → " + handleClassName + ":" + method.getName());
-                            routes.delete(requestPath, (req, resp) -> httpPublisher(req, resp, o ->
+                            routes.delete(requestPath, (req, resp) -> httpPublisher(req, resp, method, o ->
                                 handlePublisher.sendResult(req, resp, method, handleObject, o)
                             ));
                         }
                         // UPDATE
                         else if (method.isAnnotationPresent(PUT.class)) {
                             System.out.println("   PUT " + requestPath + " → " + handleClassName + ":" + method.getName());
-                            routes.put(requestPath, (req, resp) -> httpPublisher(req, resp, o ->
+                            routes.put(requestPath, (req, resp) -> httpPublisher(req, resp, method, o ->
                                 handlePublisher.sendResult(req, resp, method, handleObject, o)
                             ));
                         }
@@ -181,14 +181,14 @@ public class ReactorGuiceServer {
             StaticFilePublisher staticFilePublisher = new StaticFilePublisher(this.jarPublicDirectories);
             // static
             System.out.println("   GET /** →  /public/* <static files>");
-            routes.get("/**", (req, resp) -> httpPublisher(req, resp, o ->
+            routes.get("/**", (req, resp) -> httpPublisher(req, resp, null, o ->
                     staticFilePublisher.sendFile(req, resp)
                 )
             );
         };
     }
 
-    private Publisher<Void> httpPublisher(HttpServerRequest req, HttpServerResponse resp, Function<Object, Mono<Object>> handle) {
+    private Publisher<Void> httpPublisher(HttpServerRequest req, HttpServerResponse resp, Method method, Function<Object, Mono<Object>> handle) {
 
         // response header
         if (req.isKeepAlive()) {
@@ -199,10 +199,34 @@ public class ReactorGuiceServer {
         // result
         return doFilter(req, resp, new RequestAttribute())
             .flatMap(handle)
+            .onErrorMap(throwable -> {
+                if (handlePublisher.methodProductsValue(method).contains(MediaType.APPLICATION_JSON)) {
+                    if (throwable instanceof StatusMessageException) {
+                        resp.status(((StatusMessageException) throwable).getCode());
+                        resp.addHeader(HttpHeaderNames.CONTENT_TYPE, MediaType.APPLICATION_JSON);
+                        return throwable;
+                    }
+                    else {
+                        resp.status(HttpResponseStatus.INTERNAL_SERVER_ERROR);
+                        resp.addHeader(HttpHeaderNames.CONTENT_TYPE, MediaType.APPLICATION_JSON);
+                        return new StatusMessageException(HttpResponseStatus.INTERNAL_SERVER_ERROR, throwable.getMessage());
+                    }
+                }
+                else {
+                    if (throwable instanceof StatusMessageException) {
+                        resp.status(((StatusMessageException) throwable).getCode());
+                        resp.addHeader(HttpHeaderNames.CONTENT_TYPE, MediaType.TEXT_PLAIN);
+                        return new Exception(throwable.getMessage());
+                    }
+                    else {
+                        resp.status(HttpResponseStatus.INTERNAL_SERVER_ERROR);
+                        resp.addHeader(HttpHeaderNames.CONTENT_TYPE, MediaType.TEXT_PLAIN);
+                        return throwable;
+                    }
+                }
+            })
             .onErrorResume(throwable -> {
                 if (throwable instanceof StatusMessageException) {
-                    resp.status(((StatusMessageException) throwable).getCode());
-                    resp.addHeader(HttpHeaderNames.CONTENT_TYPE, MediaType.APPLICATION_JSON);
                     return Mono.just(
                         handlePublisher
                             .getHttpMessageConverter()
@@ -212,8 +236,6 @@ public class ReactorGuiceServer {
                     );
                 }
                 else {
-                    resp.status(HttpResponseStatus.INTERNAL_SERVER_ERROR);
-                    resp.addHeader(HttpHeaderNames.CONTENT_TYPE, MediaType.TEXT_PLAIN);
                     return Mono.just(throwable.getMessage());
                 }
             })

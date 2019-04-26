@@ -110,9 +110,9 @@ public class HandlePublisher {
         }
     }
 
-    private String methodProductsValue(Method method) {
+    public String methodProductsValue(Method method) {
         String contentType = MediaType.TEXT_HTML;
-        if (method.isAnnotationPresent(Produces.class)) {
+        if (method!=null &&  method.isAnnotationPresent(Produces.class)) {
             String _contentType = "";
             for (String mediaType : method.getAnnotation(Produces.class).value()) {
                 _contentType += (_contentType.equals("")) ? mediaType : "; " + mediaType;

@@ -16,8 +16,8 @@ class TestFilter implements Filter {
     @Override
     public Mono<Object> doFilter(HttpServerRequest request, HttpServerResponse response, RequestAttribute requestAttribute) {
         // return Mono.error(new Exception("sorry"));
-        throw new RuntimeException("abc");
-        /// return Mono.just(requestAttribute);
+        // throw new RuntimeException("abc");
+        return Mono.just(requestAttribute);
         // return Mono.error(new KReactorException(100, "zzz"));
     }
 }
