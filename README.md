@@ -32,13 +32,13 @@ maybe use Jersey to execute dispatch
 <dependency>
     <groupId>com.doopp</groupId>
     <artifactId>reactor-guice</artifactId>
-    <version>0.0.7-SNAPSHOT</version>
+    <version>0.0.7</version>
 </dependency>
 ```
 
 #### gradle
 ```
-compile 'com.doopp:reactor-guice:0.0.7-SNAPSHOT'
+compile 'com.doopp:reactor-guice:0.0.7'
 ```
 
 #### use Local Maven 
