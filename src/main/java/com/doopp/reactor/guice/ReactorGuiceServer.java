@@ -215,12 +215,12 @@ public class ReactorGuiceServer {
                 if (handlePublisher.methodProductsValue(method).contains(MediaType.APPLICATION_JSON)) {
                     if (throwable instanceof StatusMessageException) {
                         resp.status(((StatusMessageException) throwable).getCode());
-                        resp.addHeader(HttpHeaderNames.CONTENT_TYPE, MediaType.APPLICATION_JSON);
+                        resp.header(HttpHeaderNames.CONTENT_TYPE, MediaType.APPLICATION_JSON);
                         return throwable;
                     }
                     else {
                         resp.status(HttpResponseStatus.INTERNAL_SERVER_ERROR);
-                        resp.addHeader(HttpHeaderNames.CONTENT_TYPE, MediaType.APPLICATION_JSON);
+                        resp.header(HttpHeaderNames.CONTENT_TYPE, MediaType.APPLICATION_JSON);
                         return new StatusMessageException(HttpResponseStatus.INTERNAL_SERVER_ERROR, throwable.getMessage());
                     }
                 }
@@ -228,12 +228,12 @@ public class ReactorGuiceServer {
                 else {
                     if (throwable instanceof StatusMessageException) {
                         resp.status(((StatusMessageException) throwable).getCode());
-                        resp.addHeader(HttpHeaderNames.CONTENT_TYPE, MediaType.TEXT_PLAIN);
+                        resp.header(HttpHeaderNames.CONTENT_TYPE, MediaType.TEXT_PLAIN);
                         return new Exception(throwable.getMessage());
                     }
                     else {
                         resp.status(HttpResponseStatus.INTERNAL_SERVER_ERROR);
-                        resp.addHeader(HttpHeaderNames.CONTENT_TYPE, MediaType.TEXT_PLAIN);
+                        resp.header(HttpHeaderNames.CONTENT_TYPE, MediaType.TEXT_PLAIN);
                         return throwable;
                     }
                 }

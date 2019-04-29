@@ -50,7 +50,7 @@ public class HandlePublisher {
                     req, resp, method, handleObject, (RequestAttribute) requestAttribute, modelMap
                 )
                 .map(result->{
-                    resp.addHeader(HttpHeaderNames.CONTENT_TYPE, contentType);
+                    resp.header(HttpHeaderNames.CONTENT_TYPE, contentType);
                     if (result instanceof String && ((String) result).startsWith("redirect:")) {
                         String uri = ((String) result).substring(9);
                         return resp.sendRedirect(uri);
@@ -75,23 +75,23 @@ public class HandlePublisher {
                                     : this.httpMessageConverter.toJson(statusMessageResponse);
 
                     }
-                })
-                .onErrorMap(throwable -> {
-                    // return error
-                    if (contentType.contains(MediaType.TEXT_HTML) || contentType.contains(MediaType.TEXT_PLAIN)) {
-                        resp.addHeader(HttpHeaderNames.CONTENT_TYPE, contentType);
-                        return new Exception(throwable.getMessage());
-                    }
-                    else {
-                        resp.addHeader(HttpHeaderNames.CONTENT_TYPE, MediaType.APPLICATION_JSON);
-                        if (throwable instanceof StatusMessageException) {
-                            return throwable;
-                        }
-                        else {
-                            return new StatusMessageException(HttpResponseStatus.INTERNAL_SERVER_ERROR, throwable.getMessage());
-                        }
-                    }
                 });
+//                .onErrorMap(throwable -> {
+//                    // return error
+//                    if (contentType.contains(MediaType.TEXT_HTML) || contentType.contains(MediaType.TEXT_PLAIN)) {
+//                        // resp.header(HttpHeaderNames.CONTENT_TYPE, contentType);
+//                        return new Exception(throwable.getMessage());
+//                    }
+//                    else {
+//                        // resp.header(HttpHeaderNames.CONTENT_TYPE, MediaType.APPLICATION_JSON);
+//                        if (throwable instanceof StatusMessageException) {
+//                            return throwable;
+//                        }
+//                        else {
+//                            return new StatusMessageException(HttpResponseStatus.INTERNAL_SERVER_ERROR, throwable.getMessage());
+//                        }
+//                    }
+//                });
     }
 
     private Mono<Object> invokeMethod(HttpServerRequest req, HttpServerResponse resp, Method method, Object handleObject, RequestAttribute requestAttribute, ModelMap modelMap) {
