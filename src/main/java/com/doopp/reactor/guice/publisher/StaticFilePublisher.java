@@ -1,6 +1,7 @@
 package com.doopp.reactor.guice.publisher;
 
 import com.doopp.reactor.guice.StatusMessageException;
+import com.sun.nio.zipfs.ZipPath;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.EmptyByteBuf;
@@ -8,12 +9,15 @@ import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import reactor.core.publisher.Mono;
+import reactor.netty.NettyOutbound;
 import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.http.server.HttpServerResponse;
 
 import javax.ws.rs.core.MediaType;
 import java.io.*;
 import java.net.URL;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -25,8 +29,15 @@ public class StaticFilePublisher {
         this.jarPublicDirectories = jarPublicDirectories;
     }
 
-    public Mono<Object> sendFile(HttpServerRequest req, HttpServerResponse resp) {
+    public NettyOutbound sendFile(HttpServerRequest req, HttpServerResponse resp) {
+        String requestUri = req.uri().replaceAll("/+", "/");
+        String requirePath = requestUri.endsWith("/") ? "/public" + requestUri + "index.html" : "/public" + requestUri;
+        Path filePath = Paths.get(this.getClass().getResource(requirePath).getPath());
+        return resp
+                .addHeader(HttpHeaderNames.CONTENT_TYPE, contentType(requirePath.substring(requirePath.lastIndexOf(".") + 1))+"; charset=UTF-8")
+                .sendFile(filePath);
 
+        /*
         return Mono.create(sink -> {
 
             String requestUri = req.uri().replaceAll("/+", "/");
@@ -88,6 +99,7 @@ public class StaticFilePublisher {
                 System.out.println("Static file input stream close failed !");
             }
         });
+        */
     }
 
     private String contentType(String fileExt) {
