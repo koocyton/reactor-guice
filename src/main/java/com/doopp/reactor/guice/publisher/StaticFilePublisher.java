@@ -1,7 +1,6 @@
 package com.doopp.reactor.guice.publisher;
 
 import com.doopp.reactor.guice.StatusMessageException;
-import com.sun.nio.zipfs.ZipPath;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.EmptyByteBuf;
@@ -9,15 +8,12 @@ import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import reactor.core.publisher.Mono;
-import reactor.netty.NettyOutbound;
 import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.http.server.HttpServerResponse;
 
 import javax.ws.rs.core.MediaType;
 import java.io.*;
 import java.net.URL;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -29,15 +25,8 @@ public class StaticFilePublisher {
         this.jarPublicDirectories = jarPublicDirectories;
     }
 
-    public NettyOutbound sendFile(HttpServerRequest req, HttpServerResponse resp) {
-        String requestUri = req.uri().replaceAll("/+", "/");
-        String requirePath = requestUri.endsWith("/") ? "/public" + requestUri + "index.html" : "/public" + requestUri;
-        Path filePath = Paths.get(this.getClass().getResource(requirePath).getPath());
-        return resp
-                .addHeader(HttpHeaderNames.CONTENT_TYPE, contentType(requirePath.substring(requirePath.lastIndexOf(".") + 1))+"; charset=UTF-8")
-                .sendFile(filePath);
+    public Mono<Object> sendFile(HttpServerRequest req, HttpServerResponse resp) {
 
-        /*
         return Mono.create(sink -> {
 
             String requestUri = req.uri().replaceAll("/+", "/");
@@ -54,8 +43,8 @@ public class StaticFilePublisher {
                 // is director
                 if (jarPublicDirectories.get(requirePath+"/")!=null) {
                     resp.status(HttpResponseStatus.MOVED_PERMANENTLY);
-                    resp.addHeader(HttpHeaderNames.CONTENT_TYPE, MediaType.TEXT_HTML);
-                    resp.addHeader(HttpHeaderNames.LOCATION, requestUri + "/");
+                    resp.header(HttpHeaderNames.CONTENT_TYPE, MediaType.TEXT_HTML);
+                    resp.header(HttpHeaderNames.LOCATION, requestUri + "/");
                     sink.success(new EmptyByteBuf(ByteBufAllocator.DEFAULT));
                     return;
                 }
@@ -66,8 +55,8 @@ public class StaticFilePublisher {
                 // is director
                 if (resourceFile.isDirectory()) {
                     resp.status(HttpResponseStatus.MOVED_PERMANENTLY);
-                    resp.addHeader(HttpHeaderNames.CONTENT_TYPE, MediaType.TEXT_HTML);
-                    resp.addHeader(HttpHeaderNames.LOCATION, requestUri + "/");
+                    resp.header(HttpHeaderNames.CONTENT_TYPE, MediaType.TEXT_HTML);
+                    resp.header(HttpHeaderNames.LOCATION, requestUri + "/");
                     sink.success(new EmptyByteBuf(ByteBufAllocator.DEFAULT));
                     return;
                 }
@@ -82,8 +71,8 @@ public class StaticFilePublisher {
                     bout.write(bs, 0, len);
                 }
                 ByteBuf buf = Unpooled.wrappedBuffer(bout.toByteArray()).retain();
-                resp.addHeader(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(buf.readableBytes()));
-                resp.addHeader(HttpHeaderNames.CONTENT_TYPE, contentType(requirePath.substring(requirePath.lastIndexOf(".") + 1))+"; charset=UTF-8");
+                resp.header(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(buf.readableBytes()));
+                resp.header(HttpHeaderNames.CONTENT_TYPE, contentType(requirePath.substring(requirePath.lastIndexOf(".") + 1))+"; charset=UTF-8");
                 sink.success(buf);
                 buf.release();
             }
@@ -99,7 +88,6 @@ public class StaticFilePublisher {
                 System.out.println("Static file input stream close failed !");
             }
         });
-        */
     }
 
     private String contentType(String fileExt) {

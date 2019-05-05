@@ -189,8 +189,9 @@ public class ReactorGuiceServer {
             StaticFilePublisher staticFilePublisher = new StaticFilePublisher(this.jarPublicDirectories);
             // static
             System.out.println("   GET /** →  /public/* <static files>");
-            routes.get("/**", staticFilePublisher::sendFile
-            );
+            routes.get("/**", (req, resp) -> httpPublisher(req, resp, null, o ->
+                staticFilePublisher.sendFile(req, resp)
+            ));
         };
     }
 
