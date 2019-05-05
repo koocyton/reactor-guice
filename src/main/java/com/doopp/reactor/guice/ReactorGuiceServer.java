@@ -198,9 +198,9 @@ public class ReactorGuiceServer {
 
         // response header
         if (req.isKeepAlive()) {
-            resp.addHeader(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
+            resp.header(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
         }
-        resp.addHeader(HttpHeaderNames.SERVER, "power by reactor");
+        resp.header(HttpHeaderNames.SERVER, "power by reactor");
 
         // result
         return doFilter(req, resp, new RequestAttribute())
