@@ -197,7 +197,7 @@ public class ReactorGuiceServer {
             // is is api gateway server
             if (this.apiGatewayModel) {
                 ApiGatewayPublisher apiGatewayPublisher = new ApiGatewayPublisher();
-                System.out.println("   Any /** →  /<auto-route-dispatch>");
+                System.out.println("   Any /** →  /** <api gateway model>");
                 routes.route(apiGatewayPublisher::checkRequest, (req, resp) -> httpPublisher(req, resp, null, o ->
                         apiGatewayPublisher.sendResponse(req, resp)
                 ));
