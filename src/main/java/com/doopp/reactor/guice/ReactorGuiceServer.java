@@ -272,9 +272,9 @@ public class ReactorGuiceServer {
                 }
             })
             .flatMap(o -> {
-                if (o instanceof Mono) {
-                    return (Mono<Void>) o;
-                }
+                // if (o instanceof Mono) {
+                //     return (Mono<Void>) o;
+                // }
                 return (o instanceof String)
                                 ? resp.sendString(Mono.just((String) o)).then()
                                 : resp.sendObject(Mono.just(o)).then();
