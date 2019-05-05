@@ -48,7 +48,7 @@ public class ReactorGuiceServer {
     private boolean printError = false;
 
     // api gateway model default disabled
-    private boolean apiGatewayModel = false;
+    private ApiGatewayDispatcher apiGatewayDispatcher;
 
     private final Map<String, Filter> filters = new HashMap<>();
 
@@ -96,8 +96,9 @@ public class ReactorGuiceServer {
         return this;
     }
 
-    public ReactorGuiceServer setApiGatewayModel(boolean apiGatewayModel) {
-        this.apiGatewayModel = apiGatewayModel;
+    public ReactorGuiceServer setApiGatewayDispatcher(ApiGatewayDispatcher apiGatewayDispatcher) {
+        assert apiGatewayDispatcher!=null : "A ApiGatewayDispatcher instance is required";
+        this.apiGatewayDispatcher = apiGatewayDispatcher;
         return this;
     }
 
@@ -195,8 +196,8 @@ public class ReactorGuiceServer {
             }
 
             // is is api gateway server
-            if (this.apiGatewayModel) {
-                ApiGatewayPublisher apiGatewayPublisher = new ApiGatewayPublisher();
+            if (this.apiGatewayDispatcher!=null) {
+                ApiGatewayPublisher apiGatewayPublisher = new ApiGatewayPublisher(this.apiGatewayDispatcher);
                 System.out.println("   Any /** →  /** <api gateway model>");
                 routes.route(apiGatewayPublisher::checkRequest, (req, resp) -> httpPublisher(req, resp, null, o ->
                         apiGatewayPublisher.sendResponse(req, resp)

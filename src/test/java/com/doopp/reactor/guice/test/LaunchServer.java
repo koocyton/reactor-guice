@@ -70,7 +70,7 @@ public class LaunchServer {
                 .bind(host, port)
                 .injector(injector)
                 .setHttpMessageConverter(new JacksonHttpMessageConverter())
-                .setApiGatewayModel(true)
+                .setApiGatewayDispatcher(new MyApiGatewayDispatcher())
                 .handlePackages("com.doopp.reactor.guice.test.handle")
                 .addFilter("/", TestFilter.class)
                 .launch();
