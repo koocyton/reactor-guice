@@ -17,6 +17,22 @@ public class ApiGatewayPublisher {
         return Mono.just("abc");
     }
 
+    public Mono<Object> getResponse(String host, String uri) {
+        return Mono.just("abc");
+    }
+
+    public Mono<Object> postResponse(String host, String uri, String postData) {
+        return Mono.just("abc");
+    }
+
+    public Mono<Object> deleteResponse(String host, String uri) {
+        return Mono.just("abc");
+    }
+
+    public Mono<Object> putResponse(String host, String uri, String postData) {
+        return Mono.just("abc");
+    }
+
     public boolean checkRequest(HttpServerRequest req) {
         return true;
     }
