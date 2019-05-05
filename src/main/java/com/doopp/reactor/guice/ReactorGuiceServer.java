@@ -13,7 +13,6 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.netty.DisposableServer;
-import reactor.netty.NettyOutbound;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.http.server.HttpServerResponse;
@@ -47,6 +46,9 @@ public class ReactorGuiceServer {
     private Injector injector;
 
     private boolean printError = false;
+
+    // api gateway model default disabled
+    private boolean apiGatewayModel = false;
 
     private final Map<String, Filter> filters = new HashMap<>();
 
@@ -91,6 +93,11 @@ public class ReactorGuiceServer {
     public ReactorGuiceServer setTemplateDelegate(TemplateDelegate templateDelegate) {
         assert templateDelegate!=null : "A TemplateDelegate instance is required";
         handlePublisher.setTemplateDelegate(templateDelegate);
+        return this;
+    }
+
+    public ReactorGuiceServer setApiGatewayModel(boolean apiGatewayModel) {
+        this.apiGatewayModel = apiGatewayModel;
         return this;
     }
 
@@ -186,12 +193,23 @@ public class ReactorGuiceServer {
                     }
                 }
             }
-            StaticFilePublisher staticFilePublisher = new StaticFilePublisher(this.jarPublicDirectories);
-            // static
-            System.out.println("   GET /** →  /public/* <static files>");
-            routes.get("/**", (req, resp) -> httpPublisher(req, resp, null, o ->
-                staticFilePublisher.sendFile(req, resp)
-            ));
+
+            // is is api gateway server
+            if (this.apiGatewayModel) {
+                ApiGatewayPublisher apiGatewayPublisher = new ApiGatewayPublisher();
+                System.out.println("   Any /** →  /<auto-route-dispatch>");
+                routes.route(apiGatewayPublisher::checkRequest, (req, resp) -> httpPublisher(req, resp, null, o ->
+                        apiGatewayPublisher.sendResponse(req, resp)
+                ));
+            }
+            // static server
+            else {
+                StaticFilePublisher staticFilePublisher = new StaticFilePublisher(this.jarPublicDirectories);
+                System.out.println("   GET /** →  /public/* <static files>");
+                routes.get("/**", (req, resp) -> httpPublisher(req, resp, null, o ->
+                        staticFilePublisher.sendFile(req, resp)
+                ));
+            }
         };
     }
 
