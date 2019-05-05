@@ -2,6 +2,7 @@ package com.doopp.reactor.guice.test.service.impl;
 
 import com.doopp.reactor.guice.test.service.TestService;
 import com.google.inject.Inject;
+import io.netty.util.CharsetUtil;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
 
@@ -19,7 +20,7 @@ public class TestServiceImpl implements TestService {
             .uri("https://www.doopp.com")
             .responseContent()
             .aggregate()
-            .map(byteBuf -> byteBuf.toString(Charset.forName("UTF-8")));
+            .map(byteBuf -> byteBuf.toString(CharsetUtil.UTF_8));
     }
 
     @Override

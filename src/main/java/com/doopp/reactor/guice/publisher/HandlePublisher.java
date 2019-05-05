@@ -11,6 +11,7 @@ import com.doopp.reactor.guice.view.TemplateDelegate;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.*;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.multipart.*;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.server.HttpServerRequest;
@@ -169,14 +170,14 @@ public class HandlePublisher {
             // CookieParam
             else if (parameter.getAnnotation(CookieParam.class) != null) {
                 String annotationKey = parameter.getAnnotation(CookieParam.class).value();
-                Collections.addAll(annotationVal, request.cookies().get(annotationKey).toString());
-                objectList.add(paramTypeValue(annotationVal, parameterClazz));
+                // Collections.addAll(annotationVal, request.cookies().get(annotationKey).toString());
+                objectList.add(request.cookies().get(annotationKey));
             }
             // HeaderParam
             else if (parameter.getAnnotation(HeaderParam.class) != null) {
                 String annotationKey = parameter.getAnnotation(HeaderParam.class).value();
-                Collections.addAll(annotationVal, request.requestHeaders().get(annotationKey));
-                objectList.add(paramTypeValue(annotationVal, parameterClazz));
+                // Collections.addAll(annotationVal, request.requestHeaders().get(annotationKey));
+                objectList.add(request.requestHeaders().get(annotationKey));
             }
             // PathParam
             else if (parameter.getAnnotation(PathParam.class) != null) {
