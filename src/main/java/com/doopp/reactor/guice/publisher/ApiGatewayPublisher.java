@@ -2,6 +2,7 @@ package com.doopp.reactor.guice.publisher;
 
 import com.doopp.reactor.guice.ApiGatewayDispatcher;
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.cookie.Cookie;
@@ -13,6 +14,10 @@ import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.http.server.HttpServerResponse;
 
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.concurrent.Callable;
+
 public class ApiGatewayPublisher {
 
     private ApiGatewayDispatcher apiGatewayDispatcher;
@@ -22,6 +27,13 @@ public class ApiGatewayPublisher {
     }
 
     public Mono<Object> sendResponse(HttpServerRequest req, HttpServerResponse resp) {
+
+        req.withConnection(connection -> {
+            Channel channel = connection.channel();
+            Collection<Callable<String>> cc = ;
+            cc.add(() -> "战斗胜利，俘虏敌军50000人");
+            channel.eventLoop().invokeAll(cc);
+        });
 
         String uri = req.uri();
         // String baseUrl = this.apiGatewayDispatcher.getPrimaryAddress(uri);

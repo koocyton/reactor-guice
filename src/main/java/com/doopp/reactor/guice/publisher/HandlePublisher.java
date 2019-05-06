@@ -1,7 +1,6 @@
 package com.doopp.reactor.guice.publisher;
 
 import com.doopp.reactor.guice.StatusMessageResponse;
-import com.doopp.reactor.guice.StatusMessageException;
 import com.doopp.reactor.guice.RequestAttribute;
 import com.doopp.reactor.guice.annotation.RequestAttributeParam;
 import com.doopp.reactor.guice.annotation.UploadFilesParam;
@@ -9,9 +8,10 @@ import com.doopp.reactor.guice.json.HttpMessageConverter;
 import com.doopp.reactor.guice.view.ModelMap;
 import com.doopp.reactor.guice.view.TemplateDelegate;
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.Channel;
+import io.netty.channel.EventLoop;
 import io.netty.handler.codec.http.*;
 import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.multipart.*;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.server.HttpServerRequest;
@@ -22,6 +22,9 @@ import javax.ws.rs.core.MediaType;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class HandlePublisher {
 
@@ -97,10 +100,18 @@ public class HandlePublisher {
 
     private Mono<Object> invokeMethod(HttpServerRequest req, HttpServerResponse resp, Method method, Object handleObject, RequestAttribute requestAttribute, ModelMap modelMap) {
         if (req.method() == HttpMethod.POST || req.method() == HttpMethod.PUT) {
-            return req
+//            AtomicReference<Channel> channel = new AtomicReference<>();
+            return req.withConnection(con->{
+//                         channel.set(con.channel());
+                    })
                     .receive()
                     .aggregate()
                     .flatMap(byteBuf -> {
+//                        EventLoop eventLoop = channel.get().eventLoop();
+//                        Collection<Callable<Mono<Object>>> c = Collections.EMPTY_LIST;
+//                        c.add(() -> (Mono<Object>) method.invoke(handleObject, methodParams(method, req, resp, requestAttribute, modelMap, byteBuf)));
+//                        List<Future<Mono<Object>>> a = eventLoop.invokeAll(c);
+//                        return a.get(0);
                         try {
                             return (Mono<Object>) method.invoke(handleObject, methodParams(method, req, resp, requestAttribute, modelMap, byteBuf));
                         } catch (Exception e) {
