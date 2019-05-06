@@ -68,10 +68,10 @@ public class LaunchServer {
 
         ReactorGuiceServer.create()
                 .bind(host, port)
-                .injector(injector)
-                .setHttpMessageConverter(new JacksonHttpMessageConverter())
+                // .injector(injector)
+                // .setHttpMessageConverter(new JacksonHttpMessageConverter())
                 .setApiGatewayDispatcher(new MyApiGatewayDispatcher())
-                .handlePackages("com.doopp.reactor.guice.test.handle")
+                // .handlePackages("com.doopp.reactor.guice.test.handle")
                 .addFilter("/", TestFilter.class)
                 .launch();
     }

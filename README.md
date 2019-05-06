@@ -33,13 +33,13 @@ maybe use Jersey to execute dispatch
 <dependency>
     <groupId>com.doopp</groupId>
     <artifactId>reactor-guice</artifactId>
-    <version>0.0.7-SNAPSHOT</version>
+    <version>0.0.8-SNAPSHOT</version>
 </dependency>
 ```
 
 #### gradle
 ```
-compile 'com.doopp:reactor-guice:0.0.7-SNAPSHOT'
+compile 'com.doopp:reactor-guice:0.0.8-SNAPSHOT'
 ```
 
 #### use Local Maven 
@@ -48,12 +48,12 @@ mvn clean
 
 mvn package
 
-mvn install:install-file -Dfile=target/reactor-guice-0.0.7.jar -DgroupId=com.doopp.local -DartifactId=reactor-guice -Dversion=0.0.7 -Dpackaging=jar
+mvn install:install-file -Dfile=target/reactor-guice-0.0.8-SNAPSHOT.jar -DgroupId=com.doopp.local -DartifactId=reactor-guice -Dversion=0.0.8-SNAPSHOT -Dpackaging=jar
 
 <dependency>
     <groupId>com.doopp.local</groupId>
     <artifactId>reactor-guice</artifactId>
-    <version>0.0.7</version>
+    <version>0.0.8-SNAPSHOT</version>
 </dependency>
 ```
 
@@ -127,4 +127,27 @@ public class WsTestHandle extends AbstractWebSocketServerHandle {
     }
 }
 
+```
+
+#### Api Gateway Model
+
+```java
+ReactorGuiceServer.create()
+        .bind(host, port)
+        .setApiGatewayDispatcher(new MyApiGatewayDispatcher())
+        .addFilter("/", TestFilter.class)
+        .launch();
+```
+
+#### Mixed Api Gateway Model
+
+```java
+ReactorGuiceServer.create()
+        .bind(host, port)
+        .injector(injector)
+        .setHttpMessageConverter(new JacksonHttpMessageConverter())
+        .setApiGatewayDispatcher(new MyApiGatewayDispatcher())
+        .handlePackages("com.doopp.reactor.guice.test.handle")
+        .addFilter("/", TestFilter.class)
+        .launch();
 ```
