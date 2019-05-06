@@ -18,10 +18,11 @@ Reactor-guice integrates the framework of Google Guice and Reactor-netty
 0.0.5 you can upload files
 0.0.6 POST can be an array
 0.0.7 use redirect:/** to redirect
+0.0.8 support api gateway model
+      fix Repeated header information
 
 support protobuf
 support udp server
-support api gateway model
 maybe use Jersey to execute dispatch
 ```
 
