@@ -28,8 +28,7 @@ public class StaticFilePublisher {
     public Mono<Object> sendFile(HttpServerRequest req, HttpServerResponse resp) {
 
         return Mono.create(sink -> {
-
-            String requestUri = req.uri().replaceAll("/+", "/");
+            String requestUri = req.uri().replaceAll("/+", "/").split("\\?")[0].split("\\&")[0];
             String requirePath = requestUri.endsWith("/") ? "/public" + requestUri + "index.html" : "/public" + requestUri;
 
             URL requestResource = this.getClass().getResource(requirePath);
