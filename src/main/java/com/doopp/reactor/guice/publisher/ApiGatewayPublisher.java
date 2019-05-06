@@ -22,15 +22,8 @@ public class ApiGatewayPublisher {
     }
 
     public Mono<Object> sendResponse(HttpServerRequest req, HttpServerResponse resp) {
-        String insideUrl;
-        String host;
-        try {
-            insideUrl = this.apiGatewayDispatcher.getInsideUrl(req.uri());
-            host = new URL(insideUrl).getHost();
-        }
-        catch(Exception e) {
-            return Mono.error(e);
-        }
+
+        URL insideUrl = this.apiGatewayDispatcher.getInsideUrl(req.uri());
 
         HttpClient httpClient = HttpClient.create()
             .headers(httpHeaders -> {
@@ -41,7 +34,7 @@ public class ApiGatewayPublisher {
                         httpHeaders.set(action.getKey(), action.getValue());
                     }
                 });
-                httpHeaders.set("Host", host);
+                httpHeaders.set("Host", insideUrl.getHost());
                 // set cookie
                 req.cookies().forEach((charSequence, cookies)->{
                     StringBuilder cookieString = new StringBuilder();
@@ -66,7 +59,7 @@ public class ApiGatewayPublisher {
                 .aggregate()
                 .flatMap(byteBuf ->
                     sender
-                        .uri(insideUrl)
+                        .uri(insideUrl.toString())
                         .send(Mono.just(byteBuf.retain()))
                         .responseSingle((sResp, sMonoBf) -> {
                             resp.status(sResp.status()).headers(sResp.responseHeaders());
@@ -78,7 +71,7 @@ public class ApiGatewayPublisher {
         else if (req.method() == HttpMethod.DELETE) {
             return httpClient
                     .delete()
-                    .uri(insideUrl)
+                    .uri(insideUrl.toString())
                     .responseSingle((sResp, sMonoBf) -> {
                         resp.status(sResp.status()).headers(sResp.responseHeaders());
                         return sMonoBf;
@@ -88,7 +81,7 @@ public class ApiGatewayPublisher {
         else {
             return httpClient
                     .get()
-                    .uri(insideUrl)
+                    .uri(insideUrl.toString())
                     .responseSingle((sResp, sMonoBf) -> {
                         resp.status(sResp.status()).headers(sResp.responseHeaders());
                         return sMonoBf;

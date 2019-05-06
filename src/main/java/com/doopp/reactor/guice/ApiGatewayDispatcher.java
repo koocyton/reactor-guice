@@ -1,6 +1,8 @@
 package com.doopp.reactor.guice;
 
+import java.net.URL;
+
 public interface ApiGatewayDispatcher {
 
-    String getInsideUrl(String uri);
+    URL getInsideUrl(String uri);
 }
