@@ -18,10 +18,12 @@ Reactor-guice integrates the framework of Google Guice and Reactor-netty
 0.0.5 you can upload files
 0.0.6 POST can be an array
 0.0.7 use redirect:/** to redirect
+0.0.8 support api gateway model
+      fix Repeated header information
+      add cross domain header and options request
 
 support protobuf
 support udp server
-support api gateway model
 maybe use Jersey to execute dispatch
 ```
 
@@ -32,13 +34,13 @@ maybe use Jersey to execute dispatch
 <dependency>
     <groupId>com.doopp</groupId>
     <artifactId>reactor-guice</artifactId>
-    <version>0.0.7</version>
+    <version>0.0.8</version>
 </dependency>
 ```
 
 #### gradle
 ```
-compile 'com.doopp:reactor-guice:0.0.7'
+compile 'com.doopp:reactor-guice:0.0.8'
 ```
 
 #### use Local Maven 
@@ -47,12 +49,12 @@ mvn clean
 
 mvn package
 
-mvn install:install-file -Dfile=target/reactor-guice-0.0.7.jar -DgroupId=com.doopp.local -DartifactId=reactor-guice -Dversion=0.0.7 -Dpackaging=jar
+mvn install:install-file -Dfile=target/reactor-guice-0.0.8.jar -DgroupId=com.doopp.local -DartifactId=reactor-guice -Dversion=0.0.8 -Dpackaging=jar
 
 <dependency>
     <groupId>com.doopp.local</groupId>
     <artifactId>reactor-guice</artifactId>
-    <version>0.0.7</version>
+    <version>0.0.8</version>
 </dependency>
 ```
 
@@ -68,6 +70,7 @@ ReactorGuiceServer.create()
     .setTemplateDelegate(new FreemarkTemplateDelegate())
     .handlePackages("com.doopp.reactor.guice.test.handle")
     .addFilter("/", TestFilter.class)
+    .crossOrigin(true)
     .printError(true)
     .launch();
 ```
@@ -126,4 +129,27 @@ public class WsTestHandle extends AbstractWebSocketServerHandle {
     }
 }
 
+```
+
+#### Api Gateway Model
+
+```java
+ReactorGuiceServer.create()
+        .bind(host, port)
+        .setApiGatewayDispatcher(new MyApiGatewayDispatcher())
+        .addFilter("/", TestFilter.class)
+        .launch();
+```
+
+#### Mixed Api Gateway Model
+
+```java
+ReactorGuiceServer.create()
+        .bind(host, port)
+        .injector(injector)
+        .setHttpMessageConverter(new JacksonHttpMessageConverter())
+        .setApiGatewayDispatcher(new MyApiGatewayDispatcher())
+        .handlePackages("com.doopp.reactor.guice.test.handle")
+        .addFilter("/", TestFilter.class)
+        .launch();
 ```

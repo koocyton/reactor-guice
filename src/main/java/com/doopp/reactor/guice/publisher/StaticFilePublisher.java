@@ -28,8 +28,7 @@ public class StaticFilePublisher {
     public Mono<Object> sendFile(HttpServerRequest req, HttpServerResponse resp) {
 
         return Mono.create(sink -> {
-
-            String requestUri = req.uri().replaceAll("/+", "/");
+            String requestUri = req.uri().replaceAll("/+", "/").split("\\?")[0].split("\\&")[0];
             String requirePath = requestUri.endsWith("/") ? "/public" + requestUri + "index.html" : "/public" + requestUri;
 
             URL requestResource = this.getClass().getResource(requirePath);
@@ -43,8 +42,8 @@ public class StaticFilePublisher {
                 // is director
                 if (jarPublicDirectories.get(requirePath+"/")!=null) {
                     resp.status(HttpResponseStatus.MOVED_PERMANENTLY);
-                    resp.addHeader(HttpHeaderNames.CONTENT_TYPE, MediaType.TEXT_HTML);
-                    resp.addHeader(HttpHeaderNames.LOCATION, requestUri + "/");
+                    resp.header(HttpHeaderNames.CONTENT_TYPE, MediaType.TEXT_HTML);
+                    resp.header(HttpHeaderNames.LOCATION, requestUri + "/");
                     sink.success(new EmptyByteBuf(ByteBufAllocator.DEFAULT));
                     return;
                 }
@@ -55,8 +54,8 @@ public class StaticFilePublisher {
                 // is director
                 if (resourceFile.isDirectory()) {
                     resp.status(HttpResponseStatus.MOVED_PERMANENTLY);
-                    resp.addHeader(HttpHeaderNames.CONTENT_TYPE, MediaType.TEXT_HTML);
-                    resp.addHeader(HttpHeaderNames.LOCATION, requestUri + "/");
+                    resp.header(HttpHeaderNames.CONTENT_TYPE, MediaType.TEXT_HTML);
+                    resp.header(HttpHeaderNames.LOCATION, requestUri + "/");
                     sink.success(new EmptyByteBuf(ByteBufAllocator.DEFAULT));
                     return;
                 }
@@ -71,8 +70,8 @@ public class StaticFilePublisher {
                     bout.write(bs, 0, len);
                 }
                 ByteBuf buf = Unpooled.wrappedBuffer(bout.toByteArray()).retain();
-                resp.addHeader(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(buf.readableBytes()));
-                resp.addHeader(HttpHeaderNames.CONTENT_TYPE, contentType(requirePath.substring(requirePath.lastIndexOf(".") + 1))+"; charset=UTF-8");
+                resp.header(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(buf.readableBytes()));
+                resp.header(HttpHeaderNames.CONTENT_TYPE, contentType(requirePath.substring(requirePath.lastIndexOf(".") + 1))+"; charset=UTF-8");
                 sink.success(buf);
                 buf.release();
             }

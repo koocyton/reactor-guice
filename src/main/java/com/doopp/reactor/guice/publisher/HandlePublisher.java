@@ -1,7 +1,6 @@
 package com.doopp.reactor.guice.publisher;
 
 import com.doopp.reactor.guice.StatusMessageResponse;
-import com.doopp.reactor.guice.StatusMessageException;
 import com.doopp.reactor.guice.RequestAttribute;
 import com.doopp.reactor.guice.annotation.RequestAttributeParam;
 import com.doopp.reactor.guice.annotation.UploadFilesParam;
@@ -9,6 +8,8 @@ import com.doopp.reactor.guice.json.HttpMessageConverter;
 import com.doopp.reactor.guice.view.ModelMap;
 import com.doopp.reactor.guice.view.TemplateDelegate;
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.Channel;
+import io.netty.channel.EventLoop;
 import io.netty.handler.codec.http.*;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.multipart.*;
@@ -21,6 +22,9 @@ import javax.ws.rs.core.MediaType;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class HandlePublisher {
 
@@ -50,7 +54,7 @@ public class HandlePublisher {
                     req, resp, method, handleObject, (RequestAttribute) requestAttribute, modelMap
                 )
                 .map(result->{
-                    resp.addHeader(HttpHeaderNames.CONTENT_TYPE, contentType);
+                    resp.header(HttpHeaderNames.CONTENT_TYPE, contentType);
                     if (result instanceof String && ((String) result).startsWith("redirect:")) {
                         String uri = ((String) result).substring(9);
                         return resp.sendRedirect(uri);
@@ -75,31 +79,39 @@ public class HandlePublisher {
                                     : this.httpMessageConverter.toJson(statusMessageResponse);
 
                     }
-                })
-                .onErrorMap(throwable -> {
-                    // return error
-                    if (contentType.contains(MediaType.TEXT_HTML) || contentType.contains(MediaType.TEXT_PLAIN)) {
-                        resp.addHeader(HttpHeaderNames.CONTENT_TYPE, contentType);
-                        return new Exception(throwable.getMessage());
-                    }
-                    else {
-                        resp.addHeader(HttpHeaderNames.CONTENT_TYPE, MediaType.APPLICATION_JSON);
-                        if (throwable instanceof StatusMessageException) {
-                            return throwable;
-                        }
-                        else {
-                            return new StatusMessageException(HttpResponseStatus.INTERNAL_SERVER_ERROR, throwable.getMessage());
-                        }
-                    }
                 });
+//                .onErrorMap(throwable -> {
+//                    // return error
+//                    if (contentType.contains(MediaType.TEXT_HTML) || contentType.contains(MediaType.TEXT_PLAIN)) {
+//                        // resp.header(HttpHeaderNames.CONTENT_TYPE, contentType);
+//                        return new Exception(throwable.getMessage());
+//                    }
+//                    else {
+//                        // resp.header(HttpHeaderNames.CONTENT_TYPE, MediaType.APPLICATION_JSON);
+//                        if (throwable instanceof StatusMessageException) {
+//                            return throwable;
+//                        }
+//                        else {
+//                            return new StatusMessageException(HttpResponseStatus.INTERNAL_SERVER_ERROR, throwable.getMessage());
+//                        }
+//                    }
+//                });
     }
 
     private Mono<Object> invokeMethod(HttpServerRequest req, HttpServerResponse resp, Method method, Object handleObject, RequestAttribute requestAttribute, ModelMap modelMap) {
         if (req.method() == HttpMethod.POST || req.method() == HttpMethod.PUT) {
-            return req
+//            AtomicReference<Channel> channel = new AtomicReference<>();
+            return req.withConnection(con->{
+//                         channel.set(con.channel());
+                    })
                     .receive()
                     .aggregate()
                     .flatMap(byteBuf -> {
+//                        EventLoop eventLoop = channel.get().eventLoop();
+//                        Collection<Callable<Mono<Object>>> c = Collections.EMPTY_LIST;
+//                        c.add(() -> (Mono<Object>) method.invoke(handleObject, methodParams(method, req, resp, requestAttribute, modelMap, byteBuf)));
+//                        List<Future<Mono<Object>>> a = eventLoop.invokeAll(c);
+//                        return a.get(0);
                         try {
                             return (Mono<Object>) method.invoke(handleObject, methodParams(method, req, resp, requestAttribute, modelMap, byteBuf));
                         } catch (Exception e) {
@@ -169,14 +181,14 @@ public class HandlePublisher {
             // CookieParam
             else if (parameter.getAnnotation(CookieParam.class) != null) {
                 String annotationKey = parameter.getAnnotation(CookieParam.class).value();
-                Collections.addAll(annotationVal, request.cookies().get(annotationKey).toString());
-                objectList.add(paramTypeValue(annotationVal, parameterClazz));
+                // Collections.addAll(annotationVal, request.cookies().get(annotationKey).toString());
+                objectList.add(request.cookies().get(annotationKey));
             }
             // HeaderParam
             else if (parameter.getAnnotation(HeaderParam.class) != null) {
                 String annotationKey = parameter.getAnnotation(HeaderParam.class).value();
-                Collections.addAll(annotationVal, request.requestHeaders().get(annotationKey));
-                objectList.add(paramTypeValue(annotationVal, parameterClazz));
+                // Collections.addAll(annotationVal, request.requestHeaders().get(annotationKey));
+                objectList.add(request.requestHeaders().get(annotationKey));
             }
             // PathParam
             else if (parameter.getAnnotation(PathParam.class) != null) {

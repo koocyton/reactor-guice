@@ -13,7 +13,6 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.netty.DisposableServer;
-import reactor.netty.NettyOutbound;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.http.server.HttpServerResponse;
@@ -46,7 +45,14 @@ public class ReactorGuiceServer {
 
     private Injector injector;
 
+    // error log print
     private boolean printError = false;
+
+    // Cross-Origin Resource Sharing
+    private boolean crossOrigin = false;
+
+    // api gateway model default disabled
+    private ApiGatewayDispatcher apiGatewayDispatcher;
 
     private final Map<String, Filter> filters = new HashMap<>();
 
@@ -94,8 +100,19 @@ public class ReactorGuiceServer {
         return this;
     }
 
+    public ReactorGuiceServer setApiGatewayDispatcher(ApiGatewayDispatcher apiGatewayDispatcher) {
+        assert apiGatewayDispatcher!=null : "A ApiGatewayDispatcher instance is required";
+        this.apiGatewayDispatcher = apiGatewayDispatcher;
+        return this;
+    }
+
     public ReactorGuiceServer printError(boolean printError) {
         this.printError = printError;
+        return this;
+    }
+
+    public ReactorGuiceServer crossOrigin (boolean crossOrigin) {
+        this.crossOrigin = crossOrigin;
         return this;
     }
 
@@ -183,16 +200,30 @@ public class ReactorGuiceServer {
                                 handlePublisher.sendResult(req, resp, method, handleObject, o)
                             ));
                         }
+                        if (crossOrigin) {
+                            // OPTION
+                            routes.options(requestPath, (req, resp) -> httpPublisher(req, resp, method, o -> Mono.empty()));
+                        }
                     }
                 }
             }
-            StaticFilePublisher staticFilePublisher = new StaticFilePublisher(this.jarPublicDirectories);
-            // static
-            System.out.println("   GET /** →  /public/* <static files>");
-            routes.get("/**", (req, resp) -> httpPublisher(req, resp, null, o ->
-                    staticFilePublisher.sendFile(req, resp)
-                )
-            );
+
+            // is is api gateway server
+            if (this.apiGatewayDispatcher!=null) {
+                ApiGatewayPublisher apiGatewayPublisher = new ApiGatewayPublisher(this.apiGatewayDispatcher);
+                System.out.println("   Any /** →  /** <api gateway model>");
+                routes.route(apiGatewayPublisher::checkRequest, (req, resp) -> httpPublisher(req, resp, null, o ->
+                        apiGatewayPublisher.sendResponse(req, resp)
+                ));
+            }
+            // static server
+            else {
+                StaticFilePublisher staticFilePublisher = new StaticFilePublisher(this.jarPublicDirectories);
+                System.out.println("   GET /** →  /public/* <static files>");
+                routes.get("/**", (req, resp) -> httpPublisher(req, resp, null, o ->
+                        staticFilePublisher.sendFile(req, resp)
+                ));
+            }
         };
     }
 
@@ -200,9 +231,16 @@ public class ReactorGuiceServer {
 
         // response header
         if (req.isKeepAlive()) {
-            resp.addHeader(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
+            resp.header(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
         }
-        resp.addHeader(HttpHeaderNames.SERVER, "power by reactor");
+        resp.header(HttpHeaderNames.SERVER, "power by reactor");
+
+        // cross domain
+        if (crossOrigin) {
+            resp.header("Access-Control-Allow-Origin", "*")
+                        .header("Access-Control-Allow-Headers", "X-Requested-With, accept, origin, content-type")
+                        .header("Access-Control-Allow-Methods", "PUT,POST,GET,DELETE,OPTIONS");
+        }
 
         // result
         return doFilter(req, resp, new RequestAttribute())
@@ -215,12 +253,12 @@ public class ReactorGuiceServer {
                 if (handlePublisher.methodProductsValue(method).contains(MediaType.APPLICATION_JSON)) {
                     if (throwable instanceof StatusMessageException) {
                         resp.status(((StatusMessageException) throwable).getCode());
-                        resp.addHeader(HttpHeaderNames.CONTENT_TYPE, MediaType.APPLICATION_JSON);
+                        resp.header(HttpHeaderNames.CONTENT_TYPE, MediaType.APPLICATION_JSON);
                         return throwable;
                     }
                     else {
                         resp.status(HttpResponseStatus.INTERNAL_SERVER_ERROR);
-                        resp.addHeader(HttpHeaderNames.CONTENT_TYPE, MediaType.APPLICATION_JSON);
+                        resp.header(HttpHeaderNames.CONTENT_TYPE, MediaType.APPLICATION_JSON);
                         return new StatusMessageException(HttpResponseStatus.INTERNAL_SERVER_ERROR, throwable.getMessage());
                     }
                 }
@@ -228,12 +266,12 @@ public class ReactorGuiceServer {
                 else {
                     if (throwable instanceof StatusMessageException) {
                         resp.status(((StatusMessageException) throwable).getCode());
-                        resp.addHeader(HttpHeaderNames.CONTENT_TYPE, MediaType.TEXT_PLAIN);
+                        resp.header(HttpHeaderNames.CONTENT_TYPE, MediaType.TEXT_PLAIN);
                         return new Exception(throwable.getMessage());
                     }
                     else {
                         resp.status(HttpResponseStatus.INTERNAL_SERVER_ERROR);
-                        resp.addHeader(HttpHeaderNames.CONTENT_TYPE, MediaType.TEXT_PLAIN);
+                        resp.header(HttpHeaderNames.CONTENT_TYPE, MediaType.TEXT_PLAIN);
                         return throwable;
                     }
                 }
@@ -255,9 +293,9 @@ public class ReactorGuiceServer {
                 }
             })
             .flatMap(o -> {
-                if (o instanceof Mono) {
-                    return (Mono<Void>) o;
-                }
+                // if (o instanceof Mono) {
+                //     return (Mono<Void>) o;
+                // }
                 return (o instanceof String)
                                 ? resp.sendString(Mono.just((String) o)).then()
                                 : resp.sendObject(Mono.just(o)).then();

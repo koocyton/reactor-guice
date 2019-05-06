@@ -3,6 +3,7 @@ package com.doopp.reactor.guice.test.util;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.LongSerializationPolicy;
+import io.netty.util.CharsetUtil;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
 
@@ -24,7 +25,7 @@ public class HttpClientUtil {
                 .uri(url)
                 .responseContent()
                 .aggregate()
-                .map(byteBuf -> byteBuf.toString(Charset.forName("UTF-8")));
+                .map(byteBuf -> byteBuf.toString(CharsetUtil.UTF_8));
     }
 
     public static <T> Mono<T> get(String url, Class<T> clazz) {

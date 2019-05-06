@@ -51,7 +51,30 @@ public class LaunchServer {
             // .setTemplateDelegate(new ThymeleafTemplateDelegate())
             .handlePackages("com.doopp.reactor.guice.test.handle")
             .addFilter("/", TestFilter.class)
+            .crossOrigin(true)
             .launch();
+    }
+
+    @Test
+    public void testApiGatewayModel() throws IOException {
+        Properties properties = testProperties();
+
+        Injector injector = Guice.createInjector(
+                binder -> Names.bindProperties(binder, properties),
+                new Module()
+        );
+
+        String host = injector.getInstance(Key.get(String.class, Names.named("server.host")));
+        int port = injector.getInstance(Key.get(int.class, Names.named("server.port")));
+
+        ReactorGuiceServer.create()
+                .bind(host, port)
+                // .injector(injector)
+                // .setHttpMessageConverter(new JacksonHttpMessageConverter())
+                .setApiGatewayDispatcher(new MyApiGatewayDispatcher())
+                // .handlePackages("com.doopp.reactor.guice.test.handle")
+                .addFilter("/", TestFilter.class)
+                .launch();
     }
 
     @Test
