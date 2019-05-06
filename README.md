@@ -20,6 +20,7 @@ Reactor-guice integrates the framework of Google Guice and Reactor-netty
 0.0.7 use redirect:/** to redirect
 0.0.8 support api gateway model
       fix Repeated header information
+      add cross domain header and options request
 
 support protobuf
 support udp server
@@ -69,6 +70,7 @@ ReactorGuiceServer.create()
     .setTemplateDelegate(new FreemarkTemplateDelegate())
     .handlePackages("com.doopp.reactor.guice.test.handle")
     .addFilter("/", TestFilter.class)
+    .crossOrigin(true)
     .printError(true)
     .launch();
 ```

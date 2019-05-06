@@ -51,6 +51,7 @@ public class LaunchServer {
             // .setTemplateDelegate(new ThymeleafTemplateDelegate())
             .handlePackages("com.doopp.reactor.guice.test.handle")
             .addFilter("/", TestFilter.class)
+            .crossOrigin(true)
             .launch();
     }
 

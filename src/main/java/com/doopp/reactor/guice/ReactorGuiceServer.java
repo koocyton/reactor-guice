@@ -45,7 +45,11 @@ public class ReactorGuiceServer {
 
     private Injector injector;
 
+    // error log print
     private boolean printError = false;
+
+    // Cross-Origin Resource Sharing
+    private boolean crossOrigin = false;
 
     // api gateway model default disabled
     private ApiGatewayDispatcher apiGatewayDispatcher;
@@ -104,6 +108,11 @@ public class ReactorGuiceServer {
 
     public ReactorGuiceServer printError(boolean printError) {
         this.printError = printError;
+        return this;
+    }
+
+    public ReactorGuiceServer crossOrigin (boolean crossOrigin) {
+        this.crossOrigin = crossOrigin;
         return this;
     }
 
@@ -191,6 +200,10 @@ public class ReactorGuiceServer {
                                 handlePublisher.sendResult(req, resp, method, handleObject, o)
                             ));
                         }
+                        if (crossOrigin) {
+                            // OPTION
+                            routes.options(requestPath, (req, resp) -> httpPublisher(req, resp, method, o -> Mono.empty()));
+                        }
                     }
                 }
             }
@@ -221,6 +234,13 @@ public class ReactorGuiceServer {
             resp.header(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
         }
         resp.header(HttpHeaderNames.SERVER, "power by reactor");
+
+        // cross domain
+        if (crossOrigin) {
+            resp.header("Access-Control-Allow-Origin", "*")
+                        .header("Access-Control-Allow-Headers", "X-Requested-With, accept, origin, content-type")
+                        .header("Access-Control-Allow-Methods", "PUT,POST,GET,DELETE,OPTIONS");
+        }
 
         // result
         return doFilter(req, resp, new RequestAttribute())
