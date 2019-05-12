@@ -279,12 +279,11 @@ public class ReactorGuiceServer {
             .onErrorResume(throwable -> {
                 // is json
                 if (throwable instanceof StatusMessageException) {
+                    if (handlePublisher.getHttpMessageConverter()==null) {
+                        return Mono.just("{\"err_code\":500, \"err_msg\":\"A Message Converter instance is required\", \"data\":null}");
+                    }
                     return Mono.just(
-                        handlePublisher
-                            .getHttpMessageConverter()
-                            .toJson(
-                                new StatusMessageResponse(throwable)
-                            )
+                        handlePublisher.getHttpMessageConverter().toJson(throwable)
                     );
                 }
                 // string

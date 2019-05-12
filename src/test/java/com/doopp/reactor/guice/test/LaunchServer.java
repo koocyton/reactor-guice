@@ -1,6 +1,7 @@
 package com.doopp.reactor.guice.test;
 
 import com.doopp.reactor.guice.ReactorGuiceServer;
+import com.doopp.reactor.guice.test.util.MyGsonHttpMessageConverter;
 import com.doopp.reactor.guice.view.FreemarkTemplateDelegate;
 import com.doopp.reactor.guice.json.JacksonHttpMessageConverter;
 import com.doopp.reactor.guice.view.ThymeleafTemplateDelegate;
@@ -46,7 +47,7 @@ public class LaunchServer {
         ReactorGuiceServer.create()
             .bind(host, port)
             .injector(injector)
-            .setHttpMessageConverter(new JacksonHttpMessageConverter())
+            .setHttpMessageConverter(new MyGsonHttpMessageConverter())
             .setTemplateDelegate(new FreemarkTemplateDelegate())
             // .setTemplateDelegate(new ThymeleafTemplateDelegate())
             .handlePackages("com.doopp.reactor.guice.test.handle")
@@ -112,8 +113,8 @@ public class LaunchServer {
 
     private Properties testProperties() throws IOException {
         Properties properties = new Properties();
-        // properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
-        properties.load(new FileInputStream("/Developer/Project/reactor-guice/application.properties"));
+        properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
+        // properties.load(new FileInputStream("/Developer/Project/reactor-guice/application.properties"));
         return properties;
     }
 }

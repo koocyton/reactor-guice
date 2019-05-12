@@ -1,19 +1,18 @@
 package com.doopp.reactor.guice.publisher;
 
-import com.doopp.reactor.guice.StatusMessageResponse;
 import com.doopp.reactor.guice.RequestAttribute;
+import com.doopp.reactor.guice.StatusMessageException;
 import com.doopp.reactor.guice.annotation.RequestAttributeParam;
 import com.doopp.reactor.guice.annotation.UploadFilesParam;
 import com.doopp.reactor.guice.json.HttpMessageConverter;
 import com.doopp.reactor.guice.view.ModelMap;
 import com.doopp.reactor.guice.view.TemplateDelegate;
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.Channel;
-import io.netty.channel.EventLoop;
 import io.netty.handler.codec.http.*;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.multipart.*;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.http.server.HttpServerResponse;
 
@@ -22,9 +21,6 @@ import javax.ws.rs.core.MediaType;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.*;
-import java.util.concurrent.Callable;
-import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicReference;
 
 public class HandlePublisher {
 
@@ -73,13 +69,14 @@ public class HandlePublisher {
                     }
                     // json
                     else {
-                        StatusMessageResponse statusMessageResponse = new StatusMessageResponse(result);
-                        return (this.httpMessageConverter == null)
-                                    ? statusMessageResponse.toString()
-                                    : this.httpMessageConverter.toJson(statusMessageResponse);
-
+                        if (this.httpMessageConverter == null) {
+                            resp.status(HttpResponseStatus.INTERNAL_SERVER_ERROR);
+                            return "{\"err_code\":500, \"err_msg\":\"A Message Converter instance is required\", \"data\":null}";
+                        }
+                        return this.httpMessageConverter.toJson(result);
                     }
                 });
+
 //                .onErrorMap(throwable -> {
 //                    // return error
 //                    if (contentType.contains(MediaType.TEXT_HTML) || contentType.contains(MediaType.TEXT_PLAIN)) {
