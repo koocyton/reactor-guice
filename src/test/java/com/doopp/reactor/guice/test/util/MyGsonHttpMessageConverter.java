@@ -49,6 +49,7 @@ public class MyGsonHttpMessageConverter implements HttpMessageConverter {
         @Expose
         private int err_code = 0;
 
+        @Expose
         private String err_msg = "";
 
         @Expose
