@@ -37,6 +37,8 @@ public class ReactorGuiceServer {
 
     private int port = 8081;
 
+    private String version = "0.0.9";
+
     // handle
     private HandlePublisher handlePublisher = new HandlePublisher();
 
@@ -233,7 +235,7 @@ public class ReactorGuiceServer {
         if (req.isKeepAlive()) {
             resp.header(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
         }
-        resp.header(HttpHeaderNames.SERVER, "power by reactor");
+        resp.header(HttpHeaderNames.SERVER, "RGS/" + this.version);
 
         // cross domain
         if (crossOrigin) {
