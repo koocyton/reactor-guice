@@ -146,7 +146,6 @@
     </dependencies>
 
     <build>
-        <pluginManagement>
         <plugins>
             <!--生成Source jar文件-->
             <plugin>
@@ -215,7 +214,6 @@
                 </configuration>
             </plugin>
         </plugins>
-        </pluginManagement>
     </build>
 
 </project>

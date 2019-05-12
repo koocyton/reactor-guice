@@ -8,6 +8,7 @@ import com.doopp.reactor.guice.json.HttpMessageConverter;
 import com.doopp.reactor.guice.view.ModelMap;
 import com.doopp.reactor.guice.view.TemplateDelegate;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.*;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.multipart.*;
@@ -56,9 +57,13 @@ public class HandlePublisher {
                         return resp.sendRedirect(uri);
                     }
 
-                    // binary
-                    if (result instanceof ByteBuf) {
-                        return result;
+                    // byte[] binary
+                    if (result instanceof byte[]) {
+                        return Unpooled.wrappedBuffer((byte[]) result).retain();
+                    }
+                    // ByteBuf binary
+                    else if (result instanceof ByteBuf) {
+                        return ((ByteBuf) result).retain();
                     }
                     // String
                     else if (result instanceof String && (contentType.contains(MediaType.TEXT_HTML) || contentType.contains(MediaType.TEXT_PLAIN))) {

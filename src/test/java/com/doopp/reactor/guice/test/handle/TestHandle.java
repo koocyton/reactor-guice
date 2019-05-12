@@ -52,13 +52,18 @@ public class TestHandle {
     @GET
     @Path("/test/image")
     @Produces({"image/jpeg"})
-    public Mono<ByteBuf> testImage() {
+    public Mono<byte[]> testImage() {
         return httpClient
                 .get()
                 .uri("https://static.cnbetacdn.com/article/2019/0402/6398390c491f650.jpg")
                 .responseContent()
                 .aggregate()
-                .map(ByteBuf::retain);
+                // .map(ByteBuf::retain)
+                .map(byteBuf -> {
+                    byte[] abc = new byte[byteBuf.retain().readableBytes()];
+                    byteBuf.writeBytes(abc);
+                    return abc;
+                });
     }
 
     @GET
