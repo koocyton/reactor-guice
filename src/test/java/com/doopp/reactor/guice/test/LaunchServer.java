@@ -2,6 +2,7 @@ package com.doopp.reactor.guice.test;
 
 import com.doopp.reactor.guice.ReactorGuiceServer;
 import com.doopp.reactor.guice.test.util.MyGsonHttpMessageConverter;
+import com.doopp.reactor.guice.test.util.MyJacksonHttpMessageConverter;
 import com.doopp.reactor.guice.view.FreemarkTemplateDelegate;
 import com.doopp.reactor.guice.json.JacksonHttpMessageConverter;
 import com.doopp.reactor.guice.view.ThymeleafTemplateDelegate;
@@ -47,6 +48,7 @@ public class LaunchServer {
         ReactorGuiceServer.create()
             .bind(host, port)
             .injector(injector)
+            // .setHttpMessageConverter(new MyJacksonHttpMessageConverter())
             .setHttpMessageConverter(new MyGsonHttpMessageConverter())
             .setTemplateDelegate(new FreemarkTemplateDelegate())
             // .setTemplateDelegate(new ThymeleafTemplateDelegate())

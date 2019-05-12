@@ -2,56 +2,61 @@ package com.doopp.reactor.guice.test.util;
 
 import com.doopp.reactor.guice.StatusMessageException;
 import com.doopp.reactor.guice.json.HttpMessageConverter;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.LongSerializationPolicy;
-import com.google.gson.annotations.Expose;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 
-public class MyGsonHttpMessageConverter implements HttpMessageConverter {
+import java.io.IOException;
 
-    private Gson gson;
+public class MyJacksonHttpMessageConverter implements HttpMessageConverter {
 
-    public MyGsonHttpMessageConverter() {
-        this.gson = new GsonBuilder()
-            .serializeNulls()
-            .setDateFormat("yyyy-MM-dd HH:mm:ss")
-            .setLongSerializationPolicy(LongSerializationPolicy.STRING)
-            .excludeFieldsWithoutExposeAnnotation()
-            .create();
+    private ObjectMapper objectMapper;
+
+    public MyJacksonHttpMessageConverter() {
+        this.objectMapper = new ObjectMapper();
+        this.objectMapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
     }
 
-    public MyGsonHttpMessageConverter(Gson gson) {
-        assert gson!=null : "A Gson instance is required";
-        this.gson = gson;
+    public MyJacksonHttpMessageConverter(ObjectMapper objectMapper) {
+        assert objectMapper!=null : "A ObjectMapper instance is required";
+        this.objectMapper = objectMapper;
     }
 
-    public void setGson(Gson gson) {
-        assert gson!=null : "A Gson instance is required";
-        this.gson = gson;
+    public void setObjectMapper(ObjectMapper objectMapper) {
+        assert objectMapper!=null : "A ObjectMapper instance is required";
+        this.objectMapper = objectMapper;
     }
 
-    public Gson getGson() {
-        return this.gson;
+    public ObjectMapper getObjectMapper() {
+        return this.objectMapper;
     }
 
     @Override
     public String toJson(Object object) {
-        return this.gson.toJson(new response(object));
+        try {
+            return this.objectMapper.writeValueAsString(new response(object));
+        }
+        catch(JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
     public <T> T fromJson(String json, Class<T> clazz) {
-        return this.gson.fromJson(json, clazz);
+        try {
+            return this.objectMapper.readValue(json, clazz);
+        }
+        catch(IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private class response {
 
-        @Expose
         private int err_code = 0;
 
         private String err_msg = "";
 
-        @Expose
         private Object data;
 
         public Object getData() {
