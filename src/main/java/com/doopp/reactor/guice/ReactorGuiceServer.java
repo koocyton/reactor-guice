@@ -5,6 +5,7 @@ import com.doopp.reactor.guice.publisher.*;
 import com.doopp.reactor.guice.view.TemplateDelegate;
 import com.doopp.reactor.guice.websocket.AbstractWebSocketServerHandle;
 import com.doopp.reactor.guice.websocket.WebSocketServerHandle;
+import com.google.gson.reflect.TypeToken;
 import com.google.inject.Injector;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -24,6 +25,7 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.Type;
 import java.net.URL;
 import java.util.*;
 import java.util.function.Consumer;
@@ -292,9 +294,9 @@ public class ReactorGuiceServer {
                 }
             })
             .flatMap(o -> {
-                // if (o instanceof Mono) {
-                //     return (Mono<Void>) o;
-                // }
+                if (o instanceof Mono) {
+                    return (Mono<Void>) o;
+                }
                 return (o instanceof String)
                                 ? resp.sendString(Mono.just((String) o)).then()
                                 : resp.sendObject(Mono.just(o)).then();
