@@ -61,7 +61,7 @@ public class TestHandle {
                 // .map(ByteBuf::retain)
                 .map(byteBuf -> {
                     byte[] abc = new byte[byteBuf.retain().readableBytes()];
-                    byteBuf.writeBytes(abc);
+                    byteBuf.readBytes(abc);
                     return abc;
                 });
     }
