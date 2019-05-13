@@ -80,48 +80,35 @@ public class HandlePublisher {
                         return this.httpMessageConverter.toJson(result);
                     }
                 });
-
-//                .onErrorMap(throwable -> {
-//                    // return error
-//                    if (contentType.contains(MediaType.TEXT_HTML) || contentType.contains(MediaType.TEXT_PLAIN)) {
-//                        // resp.header(HttpHeaderNames.CONTENT_TYPE, contentType);
-//                        return new Exception(throwable.getMessage());
-//                    }
-//                    else {
-//                        // resp.header(HttpHeaderNames.CONTENT_TYPE, MediaType.APPLICATION_JSON);
-//                        if (throwable instanceof StatusMessageException) {
-//                            return throwable;
-//                        }
-//                        else {
-//                            return new StatusMessageException(HttpResponseStatus.INTERNAL_SERVER_ERROR, throwable.getMessage());
-//                        }
-//                    }
-//                });
     }
 
-    private Mono<Object> invokeMethod(HttpServerRequest req, HttpServerResponse resp, Method method, Object handleObject, RequestAttribute requestAttribute, ModelMap modelMap) {
-        if (req.method() == HttpMethod.POST || req.method() == HttpMethod.PUT) {
-//            AtomicReference<Channel> channel = new AtomicReference<>();
-            return req.withConnection(con->{
-//                         channel.set(con.channel());
-                    })
-                    .receive()
+    /**
+     * invoke the method
+     *
+     * @param req HttpServerRequest
+     * @param resp HttpServerResponse
+     * @param method Method
+     * @param handleObject Object
+     * @param requestAttribute RequestAttribute
+     * @param modelMap ModelMap
+     * @return Mono<?>
+     */
+    private Mono<?> invokeMethod(HttpServerRequest req, HttpServerResponse resp, Method method, Object handleObject, RequestAttribute requestAttribute, ModelMap modelMap) {
+        if (req.method() == HttpMethod.POST || req.method() == HttpMethod.PUT || req.method() == HttpMethod.DELETE) {
+            return req.receive()
                     .aggregate()
                     .flatMap(byteBuf -> {
-//                        EventLoop eventLoop = channel.get().eventLoop();
-//                        Collection<Callable<Mono<Object>>> c = Collections.EMPTY_LIST;
-//                        c.add(() -> (Mono<Object>) method.invoke(handleObject, methodParams(method, req, resp, requestAttribute, modelMap, byteBuf)));
-//                        List<Future<Mono<Object>>> a = eventLoop.invokeAll(c);
-//                        return a.get(0);
                         try {
-                            return (Mono<Object>) method.invoke(handleObject, methodParams(method, req, resp, requestAttribute, modelMap, byteBuf));
+                            Object result = method.invoke(handleObject, methodParams(method, req, resp, requestAttribute, modelMap, byteBuf));
+                            return (result instanceof Mono<?>) ? (Mono<?>) result : Mono.just(result);
                         } catch (Exception e) {
                             return Mono.error(e);
                         }
                     });
         } else {
             try {
-                return (Mono<Object>) method.invoke(handleObject, methodParams(method, req, resp, requestAttribute, modelMap, null));
+                Object result = method.invoke(handleObject, methodParams(method, req, resp, requestAttribute, modelMap, null));
+                return (result instanceof Mono<?>) ? (Mono<?>) result : Mono.just(result);
             } catch (Exception e) {
                 return Mono.error(e);
             }
@@ -131,11 +118,11 @@ public class HandlePublisher {
     public String methodProductsValue(Method method) {
         String contentType = MediaType.TEXT_HTML;
         if (method!=null &&  method.isAnnotationPresent(Produces.class)) {
-            String _contentType = "";
+            StringBuilder _contentType = new StringBuilder();
             for (String mediaType : method.getAnnotation(Produces.class).value()) {
-                _contentType += (_contentType.equals("")) ? mediaType : "; " + mediaType;
+                _contentType.append((_contentType.toString().equals("")) ? mediaType : "; " + mediaType);
             }
-            contentType = _contentType.contains("charset") ? _contentType : _contentType + "; charset=UTF-8";
+            contentType = _contentType.toString().contains("charset") ? _contentType.toString() : _contentType + "; charset=UTF-8";
         }
         return contentType;
     }
