@@ -21,7 +21,10 @@ Reactor-guice integrates the framework of Google Guice and Reactor-netty
 0.0.8 support api gateway model
       fix Repeated header information
       add cross domain header and options request
-0.0.9 support protobuf
+0.0.9 support protobuf ( can output byte[] )
+      fix redirect bug ... -_-
+      the default JSON output returns the execution
+          result directly ( remove object wrapping )
 
 support udp server
 maybe use Jersey to execute dispatch

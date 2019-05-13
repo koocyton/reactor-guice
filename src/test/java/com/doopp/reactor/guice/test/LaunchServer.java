@@ -1,6 +1,7 @@
 package com.doopp.reactor.guice.test;
 
 import com.doopp.reactor.guice.ReactorGuiceServer;
+import com.doopp.reactor.guice.test.proto.hello.Hello;
 import com.doopp.reactor.guice.test.util.MyGsonHttpMessageConverter;
 import com.doopp.reactor.guice.test.util.MyJacksonHttpMessageConverter;
 import com.doopp.reactor.guice.view.FreemarkTemplateDelegate;
@@ -43,7 +44,10 @@ public class LaunchServer {
         System.out.println(">>> http://"+host+":"+port+"/kreactor/test/image");
         System.out.println(">>> http://"+host+":"+port+"/kreactor/test/points");
         System.out.println(">>> http://"+host+":"+port+"/kreactor/test/redirect");
-        System.out.println(">>> http://"+host+":"+port+"/kreactor/test/params\n");
+        System.out.println(">>> http://"+host+":"+port+"/kreactor/test/params");
+        System.out.println(">>> http://"+host+":"+port+"/kreactor/test/protobuf");
+        System.out.println(">>> http://"+host+":"+port+"/kreactor/test/protobuf-client\n");
+
 
         ReactorGuiceServer.create()
             .bind(host, port)
@@ -118,5 +122,28 @@ public class LaunchServer {
         properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
         // properties.load(new FileInputStream("/Developer/Project/reactor-guice/application.properties"));
         return properties;
+    }
+
+    @Test
+    public void testProtobufClient() {
+        System.out.println("testProtobufClient");
+        HttpClient.create()
+            .port(8083)
+            .get()
+            .uri("http://127.0.0.1:8083/kreactor/test/protobuf")
+            .responseContent()
+            .aggregate()
+            .flatMap(byteBuf -> {
+                try {
+                    byte[] abc = new byte[byteBuf.readableBytes()];
+                    byteBuf.readBytes(abc);
+                    System.out.println(new String(abc));
+                    return Mono.just(Hello.parseFrom(abc));
+                }
+                catch(Exception e) {
+                    return Mono.error(e);
+                }
+            })
+            .subscribe(System.out::println);
     }
 }

@@ -16,7 +16,7 @@ public class MyGsonHttpMessageConverter implements HttpMessageConverter {
             .serializeNulls()
             .setDateFormat("yyyy-MM-dd HH:mm:ss")
             .setLongSerializationPolicy(LongSerializationPolicy.STRING)
-            .excludeFieldsWithoutExposeAnnotation()
+            // .excludeFieldsWithoutExposeAnnotation()
             .create();
     }
 
