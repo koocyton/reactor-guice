@@ -37,6 +37,8 @@ public class ReactorGuiceServer {
 
     private int port = 8081;
 
+    private String version = "0.0.9";
+
     // handle
     private HandlePublisher handlePublisher = new HandlePublisher();
 
@@ -233,7 +235,7 @@ public class ReactorGuiceServer {
         if (req.isKeepAlive()) {
             resp.header(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
         }
-        resp.header(HttpHeaderNames.SERVER, "power by reactor");
+        resp.header(HttpHeaderNames.SERVER, "RGS/" + this.version);
 
         // cross domain
         if (crossOrigin) {
@@ -279,12 +281,11 @@ public class ReactorGuiceServer {
             .onErrorResume(throwable -> {
                 // is json
                 if (throwable instanceof StatusMessageException) {
+                    if (handlePublisher.getHttpMessageConverter()==null) {
+                        return Mono.just("{\"err_code\":500, \"err_msg\":\"A Message Converter instance is required\", \"data\":null}");
+                    }
                     return Mono.just(
-                        handlePublisher
-                            .getHttpMessageConverter()
-                            .toJson(
-                                new StatusMessageResponse(throwable)
-                            )
+                        handlePublisher.getHttpMessageConverter().toJson(throwable)
                     );
                 }
                 // string
@@ -293,9 +294,9 @@ public class ReactorGuiceServer {
                 }
             })
             .flatMap(o -> {
-                // if (o instanceof Mono) {
-                //     return (Mono<Void>) o;
-                // }
+                if (o instanceof Mono<?>) {
+                    return (Mono<Void>) o;
+                }
                 return (o instanceof String)
                                 ? resp.sendString(Mono.just((String) o)).then()
                                 : resp.sendObject(Mono.just(o)).then();

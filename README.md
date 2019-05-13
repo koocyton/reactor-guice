@@ -21,8 +21,11 @@ Reactor-guice integrates the framework of Google Guice and Reactor-netty
 0.0.8 support api gateway model
       fix Repeated header information
       add cross domain header and options request
+0.0.9 support protobuf ( can output byte[] )
+      fix redirect bug ... -_-
+      the default JSON output returns the execution
+          result directly ( remove object wrapping )
 
-support protobuf
 support udp server
 maybe use Jersey to execute dispatch
 ```
@@ -34,13 +37,13 @@ maybe use Jersey to execute dispatch
 <dependency>
     <groupId>com.doopp</groupId>
     <artifactId>reactor-guice</artifactId>
-    <version>0.0.8</version>
+    <version>0.0.9</version>
 </dependency>
 ```
 
 #### gradle
 ```
-compile 'com.doopp:reactor-guice:0.0.8'
+compile 'com.doopp:reactor-guice:0.0.9'
 ```
 
 #### use Local Maven 
@@ -49,12 +52,12 @@ mvn clean
 
 mvn package
 
-mvn install:install-file -Dfile=target/reactor-guice-0.0.8.jar -DgroupId=com.doopp.local -DartifactId=reactor-guice -Dversion=0.0.8 -Dpackaging=jar
+mvn install:install-file -Dfile=target/reactor-guice-0.0.9.jar -DgroupId=com.doopp.local -DartifactId=reactor-guice -Dversion=0.0.9 -Dpackaging=jar
 
 <dependency>
     <groupId>com.doopp.local</groupId>
     <artifactId>reactor-guice</artifactId>
-    <version>0.0.8</version>
+    <version>0.0.9</version>
 </dependency>
 ```
 

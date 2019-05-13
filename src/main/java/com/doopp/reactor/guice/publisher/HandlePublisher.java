@@ -1,6 +1,5 @@
 package com.doopp.reactor.guice.publisher;
 
-import com.doopp.reactor.guice.StatusMessageResponse;
 import com.doopp.reactor.guice.RequestAttribute;
 import com.doopp.reactor.guice.annotation.RequestAttributeParam;
 import com.doopp.reactor.guice.annotation.UploadFilesParam;
@@ -8,11 +7,11 @@ import com.doopp.reactor.guice.json.HttpMessageConverter;
 import com.doopp.reactor.guice.view.ModelMap;
 import com.doopp.reactor.guice.view.TemplateDelegate;
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.Channel;
-import io.netty.channel.EventLoop;
+import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.*;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.multipart.*;
+import io.netty.util.CharsetUtil;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.http.server.HttpServerResponse;
@@ -22,9 +21,6 @@ import javax.ws.rs.core.MediaType;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.*;
-import java.util.concurrent.Callable;
-import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicReference;
 
 public class HandlePublisher {
 
@@ -60,9 +56,13 @@ public class HandlePublisher {
                         return resp.sendRedirect(uri);
                     }
 
-                    // binary
-                    if (result instanceof ByteBuf) {
-                        return result;
+                    // byte[] binary
+                    if (result instanceof byte[]) {
+                        return Unpooled.wrappedBuffer((byte[]) result).retain();
+                    }
+                    // ByteBuf binary
+                    else if (result instanceof ByteBuf) {
+                        return ((ByteBuf) result).retain();
                     }
                     // String
                     else if (result instanceof String && (contentType.contains(MediaType.TEXT_HTML) || contentType.contains(MediaType.TEXT_PLAIN))) {
@@ -73,54 +73,42 @@ public class HandlePublisher {
                     }
                     // json
                     else {
-                        StatusMessageResponse statusMessageResponse = new StatusMessageResponse(result);
-                        return (this.httpMessageConverter == null)
-                                    ? statusMessageResponse.toString()
-                                    : this.httpMessageConverter.toJson(statusMessageResponse);
-
+                        if (this.httpMessageConverter == null) {
+                            resp.status(HttpResponseStatus.INTERNAL_SERVER_ERROR);
+                            return "{\"err_code\":500, \"err_msg\":\"A Message Converter instance is required\", \"data\":null}";
+                        }
+                        return this.httpMessageConverter.toJson(result);
                     }
                 });
-//                .onErrorMap(throwable -> {
-//                    // return error
-//                    if (contentType.contains(MediaType.TEXT_HTML) || contentType.contains(MediaType.TEXT_PLAIN)) {
-//                        // resp.header(HttpHeaderNames.CONTENT_TYPE, contentType);
-//                        return new Exception(throwable.getMessage());
-//                    }
-//                    else {
-//                        // resp.header(HttpHeaderNames.CONTENT_TYPE, MediaType.APPLICATION_JSON);
-//                        if (throwable instanceof StatusMessageException) {
-//                            return throwable;
-//                        }
-//                        else {
-//                            return new StatusMessageException(HttpResponseStatus.INTERNAL_SERVER_ERROR, throwable.getMessage());
-//                        }
-//                    }
-//                });
     }
 
-    private Mono<Object> invokeMethod(HttpServerRequest req, HttpServerResponse resp, Method method, Object handleObject, RequestAttribute requestAttribute, ModelMap modelMap) {
-        if (req.method() == HttpMethod.POST || req.method() == HttpMethod.PUT) {
-//            AtomicReference<Channel> channel = new AtomicReference<>();
-            return req.withConnection(con->{
-//                         channel.set(con.channel());
-                    })
-                    .receive()
+    /**
+     * invoke the method
+     *
+     * @param req HttpServerRequest
+     * @param resp HttpServerResponse
+     * @param method Method
+     * @param handleObject Object
+     * @param requestAttribute RequestAttribute
+     * @param modelMap ModelMap
+     * @return Mono<?>
+     */
+    private Mono<?> invokeMethod(HttpServerRequest req, HttpServerResponse resp, Method method, Object handleObject, RequestAttribute requestAttribute, ModelMap modelMap) {
+        if (req.method() == HttpMethod.POST || req.method() == HttpMethod.PUT || req.method() == HttpMethod.DELETE) {
+            return req.receive()
                     .aggregate()
                     .flatMap(byteBuf -> {
-//                        EventLoop eventLoop = channel.get().eventLoop();
-//                        Collection<Callable<Mono<Object>>> c = Collections.EMPTY_LIST;
-//                        c.add(() -> (Mono<Object>) method.invoke(handleObject, methodParams(method, req, resp, requestAttribute, modelMap, byteBuf)));
-//                        List<Future<Mono<Object>>> a = eventLoop.invokeAll(c);
-//                        return a.get(0);
                         try {
-                            return (Mono<Object>) method.invoke(handleObject, methodParams(method, req, resp, requestAttribute, modelMap, byteBuf));
+                            Object result = method.invoke(handleObject, methodParams(method, req, resp, requestAttribute, modelMap, byteBuf));
+                            return (result instanceof Mono<?>) ? (Mono<?>) result : Mono.just(result);
                         } catch (Exception e) {
                             return Mono.error(e);
                         }
                     });
         } else {
             try {
-                return (Mono<Object>) method.invoke(handleObject, methodParams(method, req, resp, requestAttribute, modelMap, null));
+                Object result = method.invoke(handleObject, methodParams(method, req, resp, requestAttribute, modelMap, null));
+                return (result instanceof Mono<?>) ? (Mono<?>) result : Mono.just(result);
             } catch (Exception e) {
                 return Mono.error(e);
             }
@@ -130,11 +118,11 @@ public class HandlePublisher {
     public String methodProductsValue(Method method) {
         String contentType = MediaType.TEXT_HTML;
         if (method!=null &&  method.isAnnotationPresent(Produces.class)) {
-            String _contentType = "";
+            StringBuilder _contentType = new StringBuilder();
             for (String mediaType : method.getAnnotation(Produces.class).value()) {
-                _contentType += (_contentType.equals("")) ? mediaType : "; " + mediaType;
+                _contentType.append((_contentType.toString().equals("")) ? mediaType : "; " + mediaType);
             }
-            contentType = _contentType.contains("charset") ? _contentType : _contentType + "; charset=UTF-8";
+            contentType = _contentType.toString().contains("charset") ? _contentType.toString() : _contentType + "; charset=UTF-8";
         }
         return contentType;
     }
@@ -295,7 +283,7 @@ public class HandlePublisher {
         if (content != null) {
             // POST Params
             FullHttpRequest dhr = new DefaultFullHttpRequest(request.version(), request.method(), request.uri(), content, request.requestHeaders(), EmptyHttpHeaders.INSTANCE);
-            HttpPostRequestDecoder postDecoder = new HttpPostRequestDecoder(new DefaultHttpDataFactory(false), dhr);
+            HttpPostRequestDecoder postDecoder = new HttpPostRequestDecoder(new DefaultHttpDataFactory(false), dhr, CharsetUtil.UTF_8);
             List<InterfaceHttpData> postData = postDecoder.getBodyHttpDatas();
             for (InterfaceHttpData data : postData) {
                 // 一般 post 内容
