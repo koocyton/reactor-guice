@@ -115,8 +115,8 @@ public class LaunchServer {
 
     private Properties testProperties() throws IOException {
         Properties properties = new Properties();
-        properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
-        // properties.load(new FileInputStream("/Developer/Project/reactor-guice/application.properties"));
+        // properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
+        properties.load(new FileInputStream("/Developer/Project/reactor-guice/application.properties"));
         return properties;
     }
 }

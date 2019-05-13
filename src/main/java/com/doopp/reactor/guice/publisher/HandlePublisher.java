@@ -1,7 +1,6 @@
 package com.doopp.reactor.guice.publisher;
 
 import com.doopp.reactor.guice.RequestAttribute;
-import com.doopp.reactor.guice.StatusMessageException;
 import com.doopp.reactor.guice.annotation.RequestAttributeParam;
 import com.doopp.reactor.guice.annotation.UploadFilesParam;
 import com.doopp.reactor.guice.json.HttpMessageConverter;
@@ -12,8 +11,8 @@ import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.*;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.multipart.*;
+import io.netty.util.CharsetUtil;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.http.server.HttpServerResponse;
 
@@ -297,7 +296,7 @@ public class HandlePublisher {
         if (content != null) {
             // POST Params
             FullHttpRequest dhr = new DefaultFullHttpRequest(request.version(), request.method(), request.uri(), content, request.requestHeaders(), EmptyHttpHeaders.INSTANCE);
-            HttpPostRequestDecoder postDecoder = new HttpPostRequestDecoder(new DefaultHttpDataFactory(false), dhr);
+            HttpPostRequestDecoder postDecoder = new HttpPostRequestDecoder(new DefaultHttpDataFactory(false), dhr, CharsetUtil.UTF_8);
             List<InterfaceHttpData> postData = postDecoder.getBodyHttpDatas();
             for (InterfaceHttpData data : postData) {
                 // 一般 post 内容
