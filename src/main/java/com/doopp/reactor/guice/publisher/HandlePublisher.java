@@ -196,11 +196,7 @@ public class HandlePublisher {
             }
             // BeanParam
             else if (parameter.getAnnotation(BeanParam.class) != null) {
-                byte[] byteArray = new byte[content.capacity()];
-                content.readBytes(byteArray);
-                // Type type = TypeToken.get(parameter.getAnnotatedType().getType()).getType();
-                // objectList.add((new Gson()).fromJson(new String(byteArray), parameter.getAnnotatedType().getType()));
-                objectList.add(httpMessageConverter.fromJson(new String(byteArray), parameterClazz));
+                objectList.add(jsonBeanParam(content, parameterClazz));
             }
             // default
             else {
@@ -208,6 +204,22 @@ public class HandlePublisher {
             }
         }
         return objectList.toArray();
+    }
+
+    private Object jsonBeanParam(ByteBuf content, Class<?> parameterClazz) {
+        if (httpMessageConverter==null) {
+            return null;
+        }
+        byte[] byteArray = new byte[content.capacity()];
+        content.readBytes(byteArray);
+        // Type type = TypeToken.get(parameter.getAnnotatedType().getType()).getType();
+        // objectList.add((new Gson()).fromJson(new String(byteArray), parameter.getAnnotatedType().getType()));
+        return httpMessageConverter.fromJson(new String(byteArray), parameterClazz);
+    }
+
+    private Object formBeanParam(Map<String, List<String>> formParams,
+                                 Map<String, List<MemoryFileUpload>> fileParams) {
+        return null;
     }
 
     private <T> T paramTypeValue(List<String> value, Class<T> clazz) {
