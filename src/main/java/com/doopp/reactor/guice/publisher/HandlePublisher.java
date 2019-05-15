@@ -2,10 +2,12 @@ package com.doopp.reactor.guice.publisher;
 
 import com.doopp.reactor.guice.RequestAttribute;
 import com.doopp.reactor.guice.annotation.RequestAttributeParam;
-import com.doopp.reactor.guice.annotation.UploadFilesParam;
+import com.doopp.reactor.guice.annotation.FileParam;
 import com.doopp.reactor.guice.json.HttpMessageConverter;
 import com.doopp.reactor.guice.view.ModelMap;
 import com.doopp.reactor.guice.view.TemplateDelegate;
+import com.google.inject.Inject;
+import com.google.inject.Injector;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.*;
@@ -18,6 +20,7 @@ import reactor.netty.http.server.HttpServerResponse;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
@@ -142,9 +145,16 @@ public class HandlePublisher {
                 ? method.getAnnotation(Consumes.class).value()
                 : new String[0];
 
+        boolean supportJsonRequest = false;
+        for (String methodConsumeValue : methodConsumes) {
+            if (methodConsumeValue.contains(MediaType.APPLICATION_JSON)) {
+                supportJsonRequest = true;
+                break;
+            }
+        }
+
         for (Parameter parameter : method.getParameters()) {
             Class<?> parameterClazz = parameter.getType();
-            ArrayList<String> annotationVal = new ArrayList<>();
             // RequestAttribute
             if (parameterClazz == RequestAttribute.class) {
                 objectList.add(requestAttribute);
@@ -161,33 +171,26 @@ public class HandlePublisher {
             else if (parameterClazz == ModelMap.class) {
                 objectList.add(modelMap);
             }
-            // upload file
-            else if (parameter.getAnnotation(UploadFilesParam.class) != null) {
-                String annotationKey = parameter.getAnnotation(UploadFilesParam.class).value();
-                objectList.add(classCastValue(fileParams.get(annotationKey), parameterClazz));
-            }
             // RequestAttribute item
             else if (parameter.getAnnotation(RequestAttributeParam.class) != null) {
                 String annotationKey = parameter.getAnnotation(RequestAttributeParam.class).value();
                 objectList.add(requestAttribute.getAttribute(annotationKey, parameterClazz));
             }
-            // CookieParam
+            // CookieParam : Set<Cookie>
             else if (parameter.getAnnotation(CookieParam.class) != null) {
                 String annotationKey = parameter.getAnnotation(CookieParam.class).value();
                 // Collections.addAll(annotationVal, request.cookies().get(annotationKey).toString());
                 objectList.add(request.cookies().get(annotationKey));
             }
-            // HeaderParam
+            // HeaderParam : String
             else if (parameter.getAnnotation(HeaderParam.class) != null) {
                 String annotationKey = parameter.getAnnotation(HeaderParam.class).value();
-                // Collections.addAll(annotationVal, request.requestHeaders().get(annotationKey));
                 objectList.add(request.requestHeaders().get(annotationKey));
             }
             // PathParam
             else if (parameter.getAnnotation(PathParam.class) != null) {
                 String annotationKey = parameter.getAnnotation(PathParam.class).value();
-                Collections.addAll(annotationVal, request.param(annotationKey));
-                objectList.add(classCastValue(annotationVal, parameterClazz));
+                objectList.add(classCastValue(request.param(annotationKey), parameterClazz));
             }
             // QueryParam
             else if (parameter.getAnnotation(QueryParam.class) != null) {
@@ -199,15 +202,21 @@ public class HandlePublisher {
                 String annotationKey = parameter.getAnnotation(FormParam.class).value();
                 objectList.add(classCastValue(formParams.get(annotationKey), parameterClazz));
             }
+            // upload file
+            else if (parameter.getAnnotation(FileParam.class) != null) {
+                String annotationKey = parameter.getAnnotation(FileParam.class).value();
+                objectList.add(classCastValue(fileParams.get(annotationKey), parameterClazz));
+            }
             // BeanParam
             else if (parameter.getAnnotation(BeanParam.class) != null) {
-                for(String methodConsumeValue : methodConsumes) {
-                    if (methodConsumeValue.contains(MediaType.APPLICATION_JSON)) {
-                        objectList.add(jsonBeanParam(content, parameterClazz));
-                        break;
-                    }
+                // if json request
+                if (supportJsonRequest) {
+                    objectList.add(jsonBeanParam(content, parameterClazz));
                 }
-                objectList.add(formBeanParam(request,formParams, fileParams, parameterClazz, requestAttribute));
+                // default is form request
+                else {
+                    objectList.add(formBeanParam(request, formParams, fileParams, parameterClazz, requestAttribute));
+                }
             }
             // default
             else {
@@ -231,61 +240,74 @@ public class HandlePublisher {
     private Object formBeanParam(HttpServerRequest request,
                                  HttpServerResponse response,
                                  RequestAttribute requestAttribute,
+                                 ModelMap modelMap,
+                                 Map<String, List<String>> questParams,
                                  Map<String, List<String>> formParams,
                                  Map<String, List<MemoryFileUpload>> fileParams,
                                  Class<?> parameterClazz) throws IllegalAccessException {
+
+        // get all fields
         Field[] fields = parameterClazz.getFields();
+
         for(Field field : fields) {
 
             Class<?> fieldClazz = field.getType();
 
             // RequestAttribute
             if (fieldClazz == RequestAttribute.class) {
-                field.set(RequestAttribute.class, requestAttribute);
+                field.set(requestAttribute, RequestAttribute.class);
             }
             // request
             else if (fieldClazz == HttpServerRequest.class) {
-                field.set(HttpServerRequest.class, request);
+                field.set(request, HttpServerRequest.class);
             }
             // response
             else if (fieldClazz == HttpServerResponse.class) {
-                field.set(HttpServerResponse.class, response);
+                field.set(response, HttpServerResponse.class);
             }
-            // upload file
-            else if (field.getAnnotation(UploadFilesParam.class) != null) {
-                String annotationKey = field.getAnnotation(UploadFilesParam.class).value();
-                field.set(MemoryFileUpload[].class, fileParams.get(annotationKey));
+            // modelMap
+            else if (fieldClazz == ModelMap.class) {
+                field.set(modelMap, ModelMap.class);
             }
             // RequestAttribute item
             else if (field.getAnnotation(RequestAttributeParam.class) != null) {
                 String annotationKey = field.getAnnotation(RequestAttributeParam.class).value();
-                field.set(fieldClazz, requestAttribute.getAttribute(annotationKey, parameterClazz));
+                field.set(requestAttribute.getAttribute(annotationKey, fieldClazz), fieldClazz);
             }
-            // CookieParam
+            // CookieParam : Set<Cookie>
             else if (field.getAnnotation(CookieParam.class) != null) {
                 String annotationKey = field.getAnnotation(CookieParam.class).value();
                 // Collections.addAll(annotationVal, request.cookies().get(annotationKey).toString());
-                field.set(fieldClazz, request.cookies().get(annotationKey));
+                field.set(request.cookies().get(annotationKey), fieldClazz);
             }
-            // HeaderParam
+            // HeaderParam : String
             else if (field.getAnnotation(HeaderParam.class) != null) {
                 String annotationKey = field.getAnnotation(HeaderParam.class).value();
-                // Collections.addAll(annotationVal, request.requestHeaders().get(annotationKey));
-                field.set(fieldClazz, request.requestHeaders().get(annotationKey));
+                field.set(request.requestHeaders().get(annotationKey), fieldClazz);
             }
             // PathParam
             else if (field.getAnnotation(PathParam.class) != null) {
                 String annotationKey = field.getAnnotation(PathParam.class).value();
-                Collections.addAll(annotationVal, request.param(annotationKey));
-                field.set(fieldClazz, getTypeValue(annotationVal, parameterClazz));
+                field.set(classCastValue(request.param(annotationKey), fieldClazz), fieldClazz);
             }
             // QueryParam
             else if (field.getAnnotation(QueryParam.class) != null) {
                 String annotationKey = field.getAnnotation(QueryParam.class).value();
-                field.set(fieldClazz, getTypeValue(questParams.get(annotationKey), parameterClazz));
+                field.set(classCastValue(questParams.get(annotationKey), fieldClazz), fieldClazz);
             }
+            // FormParam
+            else if (field.getAnnotation(FormParam.class) != null) {
+                String annotationKey = field.getAnnotation(FormParam.class).value();
+                field.set(classCastValue(formParams.get(annotationKey), fieldClazz), fieldClazz);
+            }
+            // upload file
+            else if (field.getAnnotation(FileParam.class) != null) {
+                String annotationKey = field.getAnnotation(FileParam.class).value();
+                field.set(classCastValue(fileParams.get(annotationKey), fieldClazz), fieldClazz);
+            }
+            // default
             else {
-                field.set(fieldClazz, null);
+                field.set(null, fieldClazz);
             }
         }
         return null;
