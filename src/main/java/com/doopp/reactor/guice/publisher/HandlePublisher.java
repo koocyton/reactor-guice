@@ -164,7 +164,7 @@ public class HandlePublisher {
             // upload file
             else if (parameter.getAnnotation(UploadFilesParam.class) != null) {
                 String annotationKey = parameter.getAnnotation(UploadFilesParam.class).value();
-                objectList.add(fileParams.get(annotationKey));
+                objectList.add(classCastValue(fileParams.get(annotationKey), parameterClazz));
             }
             // RequestAttribute item
             else if (parameter.getAnnotation(RequestAttributeParam.class) != null) {
@@ -187,17 +187,17 @@ public class HandlePublisher {
             else if (parameter.getAnnotation(PathParam.class) != null) {
                 String annotationKey = parameter.getAnnotation(PathParam.class).value();
                 Collections.addAll(annotationVal, request.param(annotationKey));
-                objectList.add(paramTypeValue(annotationVal, parameterClazz));
+                objectList.add(classCastValue(annotationVal, parameterClazz));
             }
             // QueryParam
             else if (parameter.getAnnotation(QueryParam.class) != null) {
                 String annotationKey = parameter.getAnnotation(QueryParam.class).value();
-                objectList.add(paramTypeValue(questParams.get(annotationKey), parameterClazz));
+                objectList.add(classCastValue(questParams.get(annotationKey), parameterClazz));
             }
             // FormParam
             else if (parameter.getAnnotation(FormParam.class) != null) {
                 String annotationKey = parameter.getAnnotation(FormParam.class).value();
-                objectList.add(paramTypeValue(formParams.get(annotationKey), parameterClazz));
+                objectList.add(classCastValue(formParams.get(annotationKey), parameterClazz));
             }
             // BeanParam
             else if (parameter.getAnnotation(BeanParam.class) != null) {
@@ -217,12 +217,6 @@ public class HandlePublisher {
         return objectList.toArray();
     }
 
-    /**
-     * if post is json
-     * @param content
-     * @param parameterClazz
-     * @return
-     */
     private Object jsonBeanParam(ByteBuf content, Class<?> parameterClazz) {
         if (httpMessageConverter==null) {
             return null;
@@ -234,21 +228,12 @@ public class HandlePublisher {
         return httpMessageConverter.fromJson(new String(byteArray), parameterClazz);
     }
 
-    /**
-     * if post is form
-     * @param request
-     * @param formParams
-     * @param fileParams
-     * @param parameterClazz
-     * @param requestAttribute
-     * @return
-     * @throws IllegalAccessException
-     */
     private Object formBeanParam(HttpServerRequest request,
+                                 HttpServerResponse response,
+                                 RequestAttribute requestAttribute,
                                  Map<String, List<String>> formParams,
                                  Map<String, List<MemoryFileUpload>> fileParams,
-                                 Class<?> parameterClazz,
-                                 RequestAttribute requestAttribute) throws IllegalAccessException {
+                                 Class<?> parameterClazz) throws IllegalAccessException {
         Field[] fields = parameterClazz.getFields();
         for(Field field : fields) {
 
@@ -256,19 +241,15 @@ public class HandlePublisher {
 
             // RequestAttribute
             if (fieldClazz == RequestAttribute.class) {
-                field.set(RequestAttribute.class, null);
+                field.set(RequestAttribute.class, requestAttribute);
             }
             // request
             else if (fieldClazz == HttpServerRequest.class) {
-                field.set(HttpServerRequest.class, null);
+                field.set(HttpServerRequest.class, request);
             }
             // response
             else if (fieldClazz == HttpServerResponse.class) {
-                field.set(HttpServerResponse.class, null);
-            }
-            // modelMap
-            else if (fieldClazz == ModelMap.class) {
-                field.set(ModelMap.class, null);
+                field.set(HttpServerResponse.class, response);
             }
             // upload file
             else if (field.getAnnotation(UploadFilesParam.class) != null) {
@@ -296,12 +277,12 @@ public class HandlePublisher {
             else if (field.getAnnotation(PathParam.class) != null) {
                 String annotationKey = field.getAnnotation(PathParam.class).value();
                 Collections.addAll(annotationVal, request.param(annotationKey));
-                field.set(fieldClazz, paramTypeValue(annotationVal, parameterClazz));
+                field.set(fieldClazz, getTypeValue(annotationVal, parameterClazz));
             }
             // QueryParam
             else if (field.getAnnotation(QueryParam.class) != null) {
                 String annotationKey = field.getAnnotation(QueryParam.class).value();
-                field.set(fieldClazz, paramTypeValue(questParams.get(annotationKey), parameterClazz));
+                field.set(fieldClazz, getTypeValue(questParams.get(annotationKey), parameterClazz));
             }
             else {
                 field.set(fieldClazz, null);
@@ -310,7 +291,21 @@ public class HandlePublisher {
         return null;
     }
 
-    private <T> T paramTypeValue(List<String> value, Class<T> clazz) {
+    private <T> T classCastValue(Object value, Class<T> clazz) {
+
+        if (value instanceof List<?>) {
+            if (clazz.getName().contains(List.class.getName())) {
+                return clazz.cast(((List<?>) value).toArray());
+            }
+            else {
+                return clazz.cast(((List<?>) value).get(0));
+            }
+        }
+        else {
+            return clazz.cast(value);
+        }
+        /*
+
         // if value is null
         if (value == null) {
             return clazz.cast(null);
@@ -365,6 +360,7 @@ public class HandlePublisher {
         }
         // default return null;
         return clazz.cast(value);
+        */
     }
 
     // Get 请求
