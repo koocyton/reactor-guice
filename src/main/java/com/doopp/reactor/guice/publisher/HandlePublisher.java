@@ -217,6 +217,12 @@ public class HandlePublisher {
         return objectList.toArray();
     }
 
+    /**
+     * if post is json
+     * @param content
+     * @param parameterClazz
+     * @return
+     */
     private Object jsonBeanParam(ByteBuf content, Class<?> parameterClazz) {
         if (httpMessageConverter==null) {
             return null;
@@ -228,6 +234,16 @@ public class HandlePublisher {
         return httpMessageConverter.fromJson(new String(byteArray), parameterClazz);
     }
 
+    /**
+     * if post is form
+     * @param request
+     * @param formParams
+     * @param fileParams
+     * @param parameterClazz
+     * @param requestAttribute
+     * @return
+     * @throws IllegalAccessException
+     */
     private Object formBeanParam(HttpServerRequest request,
                                  Map<String, List<String>> formParams,
                                  Map<String, List<MemoryFileUpload>> fileParams,
