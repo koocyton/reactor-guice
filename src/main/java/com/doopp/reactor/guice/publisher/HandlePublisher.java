@@ -18,6 +18,7 @@ import reactor.netty.http.server.HttpServerResponse;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.*;
@@ -137,6 +138,10 @@ public class HandlePublisher {
         this.queryParams(request, questParams);
         this.formParams(request, content, formParams, fileParams);
 
+        String[] methodConsumes = (method.getAnnotation(Consumes.class)!=null)
+                ? method.getAnnotation(Consumes.class).value()
+                : new String[0];
+
         for (Parameter parameter : method.getParameters()) {
             Class<?> parameterClazz = parameter.getType();
             ArrayList<String> annotationVal = new ArrayList<>();
@@ -196,7 +201,13 @@ public class HandlePublisher {
             }
             // BeanParam
             else if (parameter.getAnnotation(BeanParam.class) != null) {
-                objectList.add(jsonBeanParam(content, parameterClazz));
+                for(String methodConsumeValue : methodConsumes) {
+                    if (methodConsumeValue.contains(MediaType.APPLICATION_JSON)) {
+                        objectList.add(jsonBeanParam(content, parameterClazz));
+                        break;
+                    }
+                }
+                objectList.add(formBeanParam(request,formParams, fileParams, parameterClazz, requestAttribute));
             }
             // default
             else {
@@ -217,8 +228,69 @@ public class HandlePublisher {
         return httpMessageConverter.fromJson(new String(byteArray), parameterClazz);
     }
 
-    private Object formBeanParam(Map<String, List<String>> formParams,
-                                 Map<String, List<MemoryFileUpload>> fileParams) {
+    private Object formBeanParam(HttpServerRequest request,
+                                 Map<String, List<String>> formParams,
+                                 Map<String, List<MemoryFileUpload>> fileParams,
+                                 Class<?> parameterClazz,
+                                 RequestAttribute requestAttribute) throws IllegalAccessException {
+        Field[] fields = parameterClazz.getFields();
+        for(Field field : fields) {
+
+            Class<?> fieldClazz = field.getType();
+
+            // RequestAttribute
+            if (fieldClazz == RequestAttribute.class) {
+                field.set(RequestAttribute.class, null);
+            }
+            // request
+            else if (fieldClazz == HttpServerRequest.class) {
+                field.set(HttpServerRequest.class, null);
+            }
+            // response
+            else if (fieldClazz == HttpServerResponse.class) {
+                field.set(HttpServerResponse.class, null);
+            }
+            // modelMap
+            else if (fieldClazz == ModelMap.class) {
+                field.set(ModelMap.class, null);
+            }
+            // upload file
+            else if (field.getAnnotation(UploadFilesParam.class) != null) {
+                String annotationKey = field.getAnnotation(UploadFilesParam.class).value();
+                field.set(MemoryFileUpload[].class, fileParams.get(annotationKey));
+            }
+            // RequestAttribute item
+            else if (field.getAnnotation(RequestAttributeParam.class) != null) {
+                String annotationKey = field.getAnnotation(RequestAttributeParam.class).value();
+                field.set(fieldClazz, requestAttribute.getAttribute(annotationKey, parameterClazz));
+            }
+            // CookieParam
+            else if (field.getAnnotation(CookieParam.class) != null) {
+                String annotationKey = field.getAnnotation(CookieParam.class).value();
+                // Collections.addAll(annotationVal, request.cookies().get(annotationKey).toString());
+                field.set(fieldClazz, request.cookies().get(annotationKey));
+            }
+            // HeaderParam
+            else if (field.getAnnotation(HeaderParam.class) != null) {
+                String annotationKey = field.getAnnotation(HeaderParam.class).value();
+                // Collections.addAll(annotationVal, request.requestHeaders().get(annotationKey));
+                field.set(fieldClazz, request.requestHeaders().get(annotationKey));
+            }
+            // PathParam
+            else if (field.getAnnotation(PathParam.class) != null) {
+                String annotationKey = field.getAnnotation(PathParam.class).value();
+                Collections.addAll(annotationVal, request.param(annotationKey));
+                field.set(fieldClazz, paramTypeValue(annotationVal, parameterClazz));
+            }
+            // QueryParam
+            else if (field.getAnnotation(QueryParam.class) != null) {
+                String annotationKey = field.getAnnotation(QueryParam.class).value();
+                field.set(fieldClazz, paramTypeValue(questParams.get(annotationKey), parameterClazz));
+            }
+            else {
+                field.set(fieldClazz, null);
+            }
+        }
         return null;
     }
 
