@@ -195,7 +195,6 @@ public class HandlePublisher {
             // PathParam
             else if (parameter.getAnnotation(PathParam.class) != null) {
                 String annotationKey = parameter.getAnnotation(PathParam.class).value();
-                Collections.addAll(annotationVal, request.param(annotationKey));
                 objectList.add(classCastValue(request.param(annotationKey), parameterClazz));
             }
             // QueryParam
