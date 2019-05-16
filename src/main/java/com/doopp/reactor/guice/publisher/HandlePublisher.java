@@ -131,7 +131,12 @@ public class HandlePublisher {
         return contentType;
     }
 
-    private Object[] methodParams(Method method, HttpServerRequest request, HttpServerResponse response, RequestAttribute requestAttribute, ModelMap modelMap, ByteBuf content) {
+    private Object[] methodParams(Method method,
+                                  HttpServerRequest request,
+                                  HttpServerResponse response,
+                                  RequestAttribute requestAttribute,
+                                  ModelMap modelMap,
+                                  ByteBuf content) throws IllegalAccessException {
         ArrayList<Object> objectList = new ArrayList<>();
 
         Map<String, List<String>> questParams = new HashMap<>();
@@ -190,6 +195,7 @@ public class HandlePublisher {
             // PathParam
             else if (parameter.getAnnotation(PathParam.class) != null) {
                 String annotationKey = parameter.getAnnotation(PathParam.class).value();
+                Collections.addAll(annotationVal, request.param(annotationKey));
                 objectList.add(classCastValue(request.param(annotationKey), parameterClazz));
             }
             // QueryParam
@@ -215,7 +221,16 @@ public class HandlePublisher {
                 }
                 // default is form request
                 else {
-                    objectList.add(formBeanParam(request, formParams, fileParams, parameterClazz, requestAttribute));
+                    objectList.add(formBeanParam(
+                        request,
+                        response,
+                        requestAttribute,
+                        modelMap,
+                        questParams,
+                        formParams,
+                        fileParams,
+                        parameterClazz
+                    ));
                 }
             }
             // default
@@ -244,10 +259,12 @@ public class HandlePublisher {
                                  Map<String, List<String>> questParams,
                                  Map<String, List<String>> formParams,
                                  Map<String, List<MemoryFileUpload>> fileParams,
-                                 Class<?> parameterClazz) throws IllegalAccessException {
+                                 Class<?> parameterClazz) throws IllegalAccessException, InstantiationException {
+
+        Object parameter = parameterClazz.newInstance();
 
         // get all fields
-        Field[] fields = parameterClazz.getFields();
+        Field[] fields = parameterClazz.getDeclaredFields();
 
         for(Field field : fields) {
 
@@ -288,7 +305,7 @@ public class HandlePublisher {
             // PathParam
             else if (field.getAnnotation(PathParam.class) != null) {
                 String annotationKey = field.getAnnotation(PathParam.class).value();
-                field.set(classCastValue(request.param(annotationKey), fieldClazz), fieldClazz);
+                field.set(request.param(annotationKey), fieldClazz);
             }
             // QueryParam
             else if (field.getAnnotation(QueryParam.class) != null) {
@@ -313,20 +330,7 @@ public class HandlePublisher {
         return null;
     }
 
-    private <T> T classCastValue(Object value, Class<T> clazz) {
-
-        if (value instanceof List<?>) {
-            if (clazz.getName().contains(List.class.getName())) {
-                return clazz.cast(((List<?>) value).toArray());
-            }
-            else {
-                return clazz.cast(((List<?>) value).get(0));
-            }
-        }
-        else {
-            return clazz.cast(value);
-        }
-        /*
+    private <T> T classCastValue(List<String> value, Class<T> clazz) {
 
         // if value is null
         if (value == null) {
@@ -380,9 +384,18 @@ public class HandlePublisher {
         else if (clazz == String[].class) {
             return clazz.cast(value.toArray(new String[0]));
         }
+        else if (value instanceof List<?>) {
+            if (clazz.getName().contains(List.class.getName())) {
+                return clazz.cast(((List<?>) value).toArray());
+            }
+            else {
+                return clazz.cast(((List<?>) value).get(0));
+            }
+        }
         // default return null;
-        return clazz.cast(value);
-        */
+        else {
+            return clazz.cast(value);
+        }
     }
 
     // Get 请求
