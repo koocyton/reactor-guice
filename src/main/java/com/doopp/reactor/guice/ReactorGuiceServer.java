@@ -11,15 +11,12 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.reactivestreams.Publisher;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.DisposableServer;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.http.server.HttpServerResponse;
 import reactor.netty.http.server.HttpServerRoutes;
-import reactor.netty.http.websocket.WebsocketInbound;
-import reactor.netty.http.websocket.WebsocketOutbound;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
@@ -165,13 +162,9 @@ public class ReactorGuiceServer {
                 // if websocket
                 if (AbstractWebSocketServerHandle.class.isAssignableFrom(handleObject.getClass()) && pathAnnotation != null) {
                     System.out.println("    WS " + rootPath + " → " + handleClassName);
-//                    routes.get(rootPath, (req, resp) -> httpPublisher(req, resp, null, o ->
-//                            websocketPublisher.sendMessage(req, resp, (WebSocketServerHandle) handleObject, o)
-//                    ));
-                    routes.ws(rootPath, (in, out)-> websocketPublisher(in, out, h ->
-                                    websocketPublisher.sendMessage(in, out, null, null)
-                            )
-                    );
+                    routes.get(rootPath, (req, resp) -> httpPublisher(req, resp, null, o ->
+                            websocketPublisher.sendMessage(req, resp, (WebSocketServerHandle) handleObject, o)
+                    ));
                     continue;
                 }
                 // methods for handle
@@ -234,10 +227,6 @@ public class ReactorGuiceServer {
                 ));
             }
         };
-    }
-
-    private Publisher<Void> websocketPublisher(WebsocketInbound in, WebsocketOutbound out, Function<Object, Mono<Object>> handle) {
-        return out.sendString(Flux.just("aaa", "bbb"));
     }
 
     private Publisher<Void> httpPublisher(HttpServerRequest req, HttpServerResponse resp, Method method, Function<Object, Mono<Object>> handle) {
@@ -314,15 +303,6 @@ public class ReactorGuiceServer {
             });
     }
 
-
-    /**
-     * 处理 filter
-     *
-     * @param req              HttpServerRequest
-     * @param resp             HttpServerResponse
-     * @param requestAttribute 当次请求
-     * @return Mono
-     */
     private Mono<Object> doFilter(HttpServerRequest req, HttpServerResponse resp, RequestAttribute requestAttribute) {
         // loop filter map
         for (String key : this.filters.keySet()) {
@@ -334,11 +314,6 @@ public class ReactorGuiceServer {
         return Mono.just(requestAttribute);
     }
 
-    /**
-     * 获取 handle 的类名
-     *
-     * @return Set<String>
-     */
     private Set<String> getHandleClassesName() {
         // init result
         Set<String> handleClassesName = new HashSet<>();

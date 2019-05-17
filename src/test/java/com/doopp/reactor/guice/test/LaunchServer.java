@@ -98,9 +98,8 @@ public class LaunchServer {
             .subscribe(client::onNext);
 
         HttpClient.create()
-            .baseUrl("127.0.0.1")
-            .port(port)
-            .wiretap(true)
+            // .port(port)
+            // .wiretap(true)
             .websocket()
             .uri("ws://127.0.0.1:8083/kreactor/ws")
             .handle((in, out) ->

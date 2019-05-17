@@ -79,6 +79,7 @@ public abstract class AbstractWebSocketServerHandle implements WebSocketServerHa
     public void disconnect(Channel channel) {
         if (channel!=null && channel.attr(CHANNEL_UNIQUE_KEY) != null) {
             String channelKey = channel.attr(CHANNEL_UNIQUE_KEY).get();
+            // queueMessageMap.get(channelKey).dispose();
             channelMap.remove(channelKey);
             queueMessageMap.remove(channelKey);
         }
