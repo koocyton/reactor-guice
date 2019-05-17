@@ -9,15 +9,25 @@ import com.doopp.reactor.guice.json.JacksonHttpMessageConverter;
 import com.doopp.reactor.guice.view.ThymeleafTemplateDelegate;
 import com.google.inject.*;
 import com.google.inject.name.Names;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.EmptyByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
+import io.netty.util.CharsetUtil;
+import javassist.bytecode.ByteArray;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxProcessor;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.ReplayProcessor;
+import reactor.core.scheduler.Schedulers;
+import reactor.netty.ByteBufFlux;
 import reactor.netty.NettyPipeline;
 import reactor.netty.http.client.HttpClient;
 
+import javax.ws.rs.core.MediaType;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.time.Duration;
@@ -44,9 +54,7 @@ public class LaunchServer {
         System.out.println(">>> http://"+host+":"+port+"/kreactor/test/image");
         System.out.println(">>> http://"+host+":"+port+"/kreactor/test/points");
         System.out.println(">>> http://"+host+":"+port+"/kreactor/test/redirect");
-        System.out.println(">>> http://"+host+":"+port+"/kreactor/test/params");
-        System.out.println(">>> http://"+host+":"+port+"/kreactor/test/protobuf");
-        System.out.println(">>> http://"+host+":"+port+"/kreactor/test/protobuf-client\n");
+        System.out.println(">>> http://"+host+":"+port+"/kreactor/test/params\n");
 
 
         ReactorGuiceServer.create()
@@ -127,10 +135,8 @@ public class LaunchServer {
 
     @Test
     public void testProtobufClient() {
-        System.out.println("testProtobufClient");
-        HttpClient.create()
-            .port(8083)
-            .get()
+
+        Hello bf = HttpClient.create().get()
             .uri("http://127.0.0.1:8083/kreactor/test/protobuf")
             .responseContent()
             .aggregate()
@@ -138,13 +144,40 @@ public class LaunchServer {
                 try {
                     byte[] abc = new byte[byteBuf.readableBytes()];
                     byteBuf.readBytes(abc);
-                    System.out.println(new String(abc));
                     return Mono.just(Hello.parseFrom(abc));
                 }
                 catch(Exception e) {
                     return Mono.error(e);
                 }
             })
-            .subscribe(System.out::println);
+            .block();
+
+        System.out.println(bf);
+    }
+
+    @Test
+    public void testPostJsonBean() {
+
+        ByteBuf buf = Unpooled.wrappedBuffer("{\"id\":\"123123121312312\", \"name\":\"wuyi\"}".getBytes()).retain();
+
+        String hhe = HttpClient.create()
+                .headers(headers->{
+                    headers.add(HttpHeaderNames.CONTENT_TYPE, MediaType.APPLICATION_JSON);
+                })
+                .post()
+                .uri("http://127.0.0.1:8083/kreactor/test/post-bean")
+                .send(Flux.just(buf))
+                .responseSingle((res, content) -> content)
+                .map(byteBuf -> {
+                    return byteBuf.toString(CharsetUtil.UTF_8);
+                })
+                .block();
+
+        System.out.println(hhe);
+    }
+
+    @Test
+    public void testPostFormBean() {
+
     }
 }
