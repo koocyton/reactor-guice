@@ -32,7 +32,6 @@ public abstract class AbstractWebSocketServerHandle implements WebSocketServerHa
 
     @Override
     public synchronized void connected(Channel channel, String channelKey) {
-        this.disconnect(channelMap.get(channelKey));
         channel.attr(CHANNEL_UNIQUE_KEY).set(channelKey);
         channelMap.put(channelKey, channel);
         queueMessageMap.put(channelKey, ReplayProcessor.create());

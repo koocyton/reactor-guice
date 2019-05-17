@@ -6,8 +6,6 @@ import com.doopp.reactor.guice.annotation.FileParam;
 import com.doopp.reactor.guice.json.HttpMessageConverter;
 import com.doopp.reactor.guice.view.ModelMap;
 import com.doopp.reactor.guice.view.TemplateDelegate;
-import com.google.inject.Inject;
-import com.google.inject.Injector;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.*;
@@ -20,11 +18,7 @@ import reactor.netty.http.server.HttpServerResponse;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
-import java.io.File;
-import java.io.InputStream;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.AnnotatedType;
-import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.*;
@@ -90,24 +84,33 @@ public class HandlePublisher {
             });
     }
 
-    /**
-     * invoke the method
-     *
-     * @param req              HttpServerRequest
-     * @param resp             HttpServerResponse
-     * @param method           Method
-     * @param handleObject     Object
-     * @param requestAttribute RequestAttribute
-     * @param modelMap         ModelMap
-     * @return Mono<?>
-     */
-    private Mono<?> invokeMethod(HttpServerRequest req, HttpServerResponse resp, Method method, Object handleObject, RequestAttribute requestAttribute, ModelMap modelMap) {
-        if (req.method() == HttpMethod.POST || req.method() == HttpMethod.PUT || req.method() == HttpMethod.DELETE) {
-            return req.receive()
+    private Mono<?> invokeMethod(HttpServerRequest request, HttpServerResponse response, Method method, Object handleObject, RequestAttribute requestAttribute, ModelMap modelMap) {
+
+        // value of url quest
+        Map<String, List<String>> questParams = new HashMap<>();
+        // values of form post
+        Map<String, List<String>> formParams = new HashMap<>();
+        // values of file upload
+        Map<String, List<MemoryFileUpload>> fileParams = new HashMap<>();
+        // get results
+        this.queryParams(request, questParams);
+
+        if (request.method() == HttpMethod.POST || request.method() == HttpMethod.PUT || request.method() == HttpMethod.DELETE) {
+            return request.receive()
                 .aggregate()
                 .flatMap(byteBuf -> {
                     try {
-                        Object result = method.invoke(handleObject, methodParams(method, req, resp, requestAttribute, modelMap, byteBuf));
+                        this.formParams(request, byteBuf, formParams, fileParams);
+                        Object result = method.invoke(handleObject, methodParams(method,
+                                request,
+                                response,
+                                requestAttribute,
+                                modelMap,
+                                byteBuf,
+                                questParams,
+                                formParams,
+                                fileParams
+                        ));
                         return (result instanceof Mono<?>) ? (Mono<?>) result : Mono.just(result);
                     } catch (Exception e) {
                         return Mono.error(e);
@@ -115,7 +118,17 @@ public class HandlePublisher {
                 });
         } else {
             try {
-                Object result = method.invoke(handleObject, methodParams(method, req, resp, requestAttribute, modelMap, null));
+                this.formParams(request, null, formParams, fileParams);
+                Object result = method.invoke(handleObject, methodParams(method,
+                        request,
+                        response,
+                        requestAttribute,
+                        modelMap,
+                        null,
+                        questParams,
+                        formParams,
+                        fileParams
+                ));
                 return (result instanceof Mono<?>) ? (Mono<?>) result : Mono.just(result);
             } catch (Exception e) {
                 return Mono.error(e);
@@ -140,20 +153,14 @@ public class HandlePublisher {
                                   HttpServerResponse response,
                                   RequestAttribute requestAttribute,
                                   ModelMap modelMap,
-                                  ByteBuf content) throws IllegalAccessException, InstantiationException {
+                                  ByteBuf content,
+                                  Map<String, List<String>> questParams,
+                                  Map<String, List<String>> formParams,
+                                  Map<String, List<MemoryFileUpload>> fileParams
+    ) throws IllegalAccessException, InstantiationException, InvocationTargetException {
 
         // values of method parameters
         ArrayList<Object> objectList = new ArrayList<>();
-
-        // value of url quest
-        Map<String, List<String>> questParams = new HashMap<>();
-        // values of form post
-        Map<String, List<String>> formParams = new HashMap<>();
-        // values of file upload
-        Map<String, List<MemoryFileUpload>> fileParams = new HashMap<>();
-        // get results
-        this.queryParams(request, questParams);
-        this.formParams(request, content, formParams, fileParams);
 
         // is a json request
         boolean isJsonRequest = false;
@@ -233,6 +240,7 @@ public class HandlePublisher {
                         response,
                         requestAttribute,
                         modelMap,
+                        content,
                         questParams,
                         formParams,
                         fileParams,
@@ -263,17 +271,26 @@ public class HandlePublisher {
                                  HttpServerResponse response,
                                  RequestAttribute requestAttribute,
                                  ModelMap modelMap,
+                                 ByteBuf content,
                                  Map<String, List<String>> questParams,
                                  Map<String, List<String>> formParams,
                                  Map<String, List<MemoryFileUpload>> fileParams,
-                                 Class<?> parameterClazz) throws IllegalAccessException, InstantiationException {
+                                 Class<?> parameterClazz) throws IllegalAccessException, InstantiationException, InvocationTargetException {
 
         Object parameterObject = parameterClazz.newInstance();
         Method[] parameterMethods = parameter.getClass().getMethods();
         for (Method parameterMethod : parameterMethods) {
             if (parameterMethod.getName().startsWith("set")) {
-                Class<?>[] types = parameterMethod.getParameterTypes();
-                parameterMethod.invoke(parameterObject, methodValue);
+                parameterMethod.invoke(parameterObject, methodParams(parameterMethod,
+                        request,
+                        response,
+                        requestAttribute,
+                        modelMap,
+                        content,
+                        questParams,
+                        formParams,
+                        fileParams
+                ));
             }
         }
         return parameterObject;

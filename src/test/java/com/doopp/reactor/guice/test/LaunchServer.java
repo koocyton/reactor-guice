@@ -58,7 +58,8 @@ public class LaunchServer {
             // .setTemplateDelegate(new ThymeleafTemplateDelegate())
             .handlePackages("com.doopp.reactor.guice.test.handle")
             .addFilter("/", TestFilter.class)
-            .crossOrigin(true)
+            .printError(true)
+            // .crossOrigin(true)
             .launch();
     }
 
@@ -119,8 +120,8 @@ public class LaunchServer {
 
     private Properties testProperties() throws IOException {
         Properties properties = new Properties();
-        properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
-        // properties.load(new FileInputStream("/Developer/Project/reactor-guice/application.properties"));
+        // properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
+        properties.load(new FileInputStream("/Developer/Project/reactor-guice/application.properties"));
         return properties;
     }
 
