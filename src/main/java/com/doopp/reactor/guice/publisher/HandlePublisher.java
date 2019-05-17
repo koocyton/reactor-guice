@@ -28,7 +28,6 @@ public class HandlePublisher {
     private HttpMessageConverter httpMessageConverter;
 
     private TemplateDelegate templateDelegate;
-    private Object parameter;
 
     public void setHttpMessageConverter(HttpMessageConverter httpMessageConverter) {
         this.httpMessageConverter = httpMessageConverter;
@@ -278,7 +277,7 @@ public class HandlePublisher {
                                  Class<?> parameterClazz) throws IllegalAccessException, InstantiationException, InvocationTargetException {
 
         Object parameterObject = parameterClazz.newInstance();
-        Method[] parameterMethods = parameter.getClass().getMethods();
+        Method[] parameterMethods = parameterObject.getClass().getMethods();
         for (Method parameterMethod : parameterMethods) {
             if (parameterMethod.getName().startsWith("set")) {
                 parameterMethod.invoke(parameterObject, methodParams(parameterMethod,
