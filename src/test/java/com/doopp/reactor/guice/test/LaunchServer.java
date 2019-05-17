@@ -98,10 +98,11 @@ public class LaunchServer {
             .subscribe(client::onNext);
 
         HttpClient.create()
+            .baseUrl("127.0.0.1")
             .port(port)
             .wiretap(true)
             .websocket()
-            .uri("/kreactor/ws")
+            .uri("ws://127.0.0.1:8083/kreactor/ws")
             .handle((in, out) ->
                 out.withConnection(conn->{
                         in.aggregateFrames().receiveFrames().map(frames->{

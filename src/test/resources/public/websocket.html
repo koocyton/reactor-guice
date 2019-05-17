@@ -49,13 +49,12 @@
 <body>
   <script>
     let wc = WebSocketService.connect("/kreactor/ws");
-    wc.onOpen(function(e){
-       window.console.log(e);
-    });
     wc.onMessage(function(message){
         window.console.log(message);
     });
-    wc.send("abc");
+    wc.onOpen(function(e){
+        wc.send("abc");
+    });
   </script>
 </body>
 </html>
