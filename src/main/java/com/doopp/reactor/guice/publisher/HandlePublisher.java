@@ -6,6 +6,7 @@ import com.doopp.reactor.guice.annotation.FileParam;
 import com.doopp.reactor.guice.json.HttpMessageConverter;
 import com.doopp.reactor.guice.view.ModelMap;
 import com.doopp.reactor.guice.view.TemplateDelegate;
+import com.google.common.base.Strings;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.*;
@@ -18,6 +19,7 @@ import reactor.netty.http.server.HttpServerResponse;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
@@ -277,6 +279,20 @@ public class HandlePublisher {
                                  Class<?> parameterClazz) throws IllegalAccessException, InstantiationException, InvocationTargetException {
 
         Object parameterObject = parameterClazz.newInstance();
+        Field[] parameterFields = parameterObject.getClass().getDeclaredFields();
+        for(Field parameterField : parameterFields) {
+            System.out.println(parameterField);
+            try {
+                Method parameterMethod = parameterObject.getClass().getMethod("set" + captureName(parameterField.getName()), Void.class);
+                System.out.println(parameterMethod);
+            }
+            catch(NoSuchMethodException e) {
+                e.printStackTrace();
+            }
+        }
+        return parameterObject;
+
+        /*
         Method[] parameterMethods = parameterObject.getClass().getMethods();
         for (Method parameterMethod : parameterMethods) {
             if (parameterMethod.getName().startsWith("set")) {
@@ -292,7 +308,15 @@ public class HandlePublisher {
                 ));
             }
         }
-        return parameterObject;
+        */
+
+    }
+
+    // 进行字母的ascii编码前移，效率要高于截取字符串进行转换的操作
+    private static String captureName(String str) {
+        char[] cs=str.toCharArray();
+        cs[0]-=32;
+        return String.valueOf(cs);
     }
 
     private <T> T classCastFileUploadValue(List<MemoryFileUpload> value, Class<T> clazz) {

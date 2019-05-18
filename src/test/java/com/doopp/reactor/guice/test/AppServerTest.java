@@ -21,6 +21,7 @@ import reactor.netty.NettyPipeline;
 import reactor.netty.http.client.HttpClient;
 
 import javax.ws.rs.core.MediaType;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.time.Duration;
@@ -29,11 +30,11 @@ import java.util.Properties;
 public class AppServerTest {
 
     @Test
-    public void test() throws IOException {
+    public void testServer() throws IOException {
 
         Properties properties = new Properties();
-        // properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
-        properties.load(new FileInputStream("/Developer/Project/reactor-guice/application.properties"));
+        properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
+        // properties.load(new FileInputStream("/Developer/Project/reactor-guice/application.properties"));
 
         Injector injector = Guice.createInjector(
                 binder -> Names.bindProperties(binder, properties),
@@ -69,23 +70,23 @@ public class AppServerTest {
     @Test
     public void testProtobufClient() {
 
-        Hello bf = HttpClient.create().get()
+        byte[] bt = HttpClient.create().get()
             .uri("http://127.0.0.1:8083/kreactor/test/protobuf")
             .responseContent()
             .aggregate()
-            .flatMap(byteBuf -> {
-                try {
-                    byte[] abc = new byte[byteBuf.readableBytes()];
-                    byteBuf.readBytes(abc);
-                    return Mono.just(Hello.parseFrom(abc));
-                }
-                catch(Exception e) {
-                    return Mono.error(e);
-                }
+            .map(byteBuf -> {
+                byte[] abc = new byte[byteBuf.readableBytes()];
+                byteBuf.readBytes(abc);
+                return abc;
             })
             .block();
 
-        System.out.println(bf);
+        try {
+            System.out.println(Hello.parseFrom(bt));
+        }
+        catch(Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Test
@@ -101,9 +102,7 @@ public class AppServerTest {
                 .uri("http://127.0.0.1:8083/kreactor/test/post-bean")
                 .send(Flux.just(buf))
                 .responseSingle((res, content) -> content)
-                .map(byteBuf -> {
-                    return byteBuf.toString(CharsetUtil.UTF_8);
-                })
+                .map(byteBuf -> byteBuf.toString(CharsetUtil.UTF_8))
                 .block();
 
         System.out.println(hhe);
@@ -111,6 +110,34 @@ public class AppServerTest {
 
     @Test
     public void testPostFormBean() {
+        String hhe = HttpClient.create()
+            .post()
+            .uri("http://127.0.0.1:8083/kreactor/test/post-bean")
+            .sendForm((req, form) -> form.multipart(false)
+                .attr("id", "123123121312312")
+                .attr("account", "account")
+                .attr("password", "password")
+                .attr("name", "name")
+            )
+            .responseSingle((res, content) -> content)
+            .map(byteBuf -> byteBuf.toString(CharsetUtil.UTF_8))
+            .block();
+        System.out.println(hhe);
+    }
 
+    @Test
+    public void testFileUpload() {
+
+        String hhe = HttpClient.create()
+            .post()
+            .uri("http://127.0.0.1:8083/kreactor/test/post-bean")
+            .sendForm((req, form) -> form.multipart(true)
+                .file("image", new File(""))
+            )
+            .responseSingle((res, content) -> content)
+            .map(byteBuf -> byteBuf.toString(CharsetUtil.UTF_8))
+            .block();
+
+        System.out.println(hhe);
     }
 }
