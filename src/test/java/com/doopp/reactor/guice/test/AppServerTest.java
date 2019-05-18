@@ -105,7 +105,7 @@ public class AppServerTest {
                 headers.add(HttpHeaderNames.CONTENT_TYPE, "application/x-protobuf");
             })
             .post()
-            .uri("http://127.0.0.1:8083/kreactor/test/post-bean")
+            .uri("http://127.0.0.1:8083/kreactor/test/proto-post-bean")
             .send(Flux.just(buf))
             .responseSingle((res, content) -> content)
             .map(byteBuf -> byteBuf.toString(CharsetUtil.UTF_8))

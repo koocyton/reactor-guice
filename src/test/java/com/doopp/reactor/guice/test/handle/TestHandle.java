@@ -112,4 +112,10 @@ public class TestHandle {
     public Mono<User> testPostBean(@BeanParam User user) {
         return Mono.just(user);
     }
+
+    @POST
+    @Path("/test/proto-post-bean")
+    public Mono<Hello> testPostBean(@BeanParam Hello hello) {
+        return Mono.just(hello);
+    }
 }

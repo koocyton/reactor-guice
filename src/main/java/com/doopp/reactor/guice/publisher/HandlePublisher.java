@@ -280,13 +280,13 @@ public class HandlePublisher {
 
     private Object protobufBeanParam(ByteBuf content, Class<? extends com.google.protobuf.GeneratedMessageV3> parameterClazz) {
         try {
-            Object object = parameterClazz.newInstance();
-            Method method = object.getClass().getMethod("parseFrom", byte[].class);
+            Method method = parameterClazz.getMethod("parseFrom", byte[].class);
             byte[] bytes = new byte[content.readableBytes()];
             content.readBytes(bytes);
             return method.invoke(parameterClazz, (Object) bytes);
         }
         catch (Exception e) {
+            e.printStackTrace();
             return null;
         }
     }
