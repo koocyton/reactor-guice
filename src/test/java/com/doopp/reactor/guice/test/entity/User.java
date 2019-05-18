@@ -1,9 +1,5 @@
 package com.doopp.reactor.guice.test.entity;
 
-import com.doopp.reactor.guice.view.ModelMap;
-import reactor.netty.http.server.HttpServerRequest;
-
-import javax.ws.rs.FormParam;
 
 public class User {
 
@@ -15,7 +11,6 @@ public class User {
 
     private String name;
 
-    @FormParam("id")
     public void setId(Long id) {
         this.id = id;
     }
@@ -24,7 +19,6 @@ public class User {
         return id;
     }
 
-    @FormParam("name")
     public void setName(String name) {
         this.name = name;
     }
@@ -33,7 +27,6 @@ public class User {
         return name;
     }
 
-    @FormParam("account")
     public void setAccount(String account) {
         this.account = account;
     }
@@ -42,7 +35,6 @@ public class User {
         return account;
     }
 
-    @FormParam("password")
     public void setPassword(String password) {
         this.password = password;
     }

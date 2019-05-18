@@ -281,13 +281,11 @@ public class HandlePublisher {
         Object parameterObject = parameterClazz.newInstance();
         Field[] parameterFields = parameterObject.getClass().getDeclaredFields();
         for(Field parameterField : parameterFields) {
-            System.out.println(parameterField);
             try {
-                Method parameterMethod = parameterObject.getClass().getMethod("set" + captureName(parameterField.getName()), Void.class);
-                System.out.println(parameterMethod);
+                Method parameterMethod = parameterObject.getClass().getMethod("set" + captureName(parameterField.getName()), parameterField.getType());
+                parameterMethod.invoke(parameterObject, classCastStringValue(formParams.get(parameterField.getName()), parameterField.getType()));
             }
-            catch(NoSuchMethodException e) {
-                e.printStackTrace();
+            catch(NoSuchMethodException ignored) {
             }
         }
         return parameterObject;
