@@ -25,6 +25,7 @@ Reactor-guice integrates the framework of Google Guice and Reactor-netty
       fix redirect bug ... -_-
       the default JSON output returns the execution
           result directly ( remove object wrapping )
+0.10  support BeanParam for form post and json post
 
 support udp server
 maybe use Jersey to execute dispatch
@@ -37,13 +38,13 @@ maybe use Jersey to execute dispatch
 <dependency>
     <groupId>com.doopp</groupId>
     <artifactId>reactor-guice</artifactId>
-    <version>0.0.9-SNAPSHOT</version>
+    <version>0.10-SNAPSHOT</version>
 </dependency>
 ```
 
 #### gradle
 ```
-compile 'com.doopp:reactor-guice:0.0.9-SNAPSHOT'
+compile 'com.doopp:reactor-guice:0.10-SNAPSHOT'
 ```
 
 #### use Local Maven 
@@ -52,12 +53,12 @@ mvn clean
 
 mvn package
 
-mvn install:install-file -Dfile=target/reactor-guice-0.0.9-SNAPSHOT.jar -DgroupId=com.doopp.local -DartifactId=reactor-guice -Dversion=0.0.9-SNAPSHOT -Dpackaging=jar
+mvn install:install-file -Dfile=target/reactor-guice-0.10-SNAPSHOT.jar -DgroupId=com.doopp.local -DartifactId=reactor-guice -Dversion=0.10-SNAPSHOT -Dpackaging=jar
 
 <dependency>
     <groupId>com.doopp.local</groupId>
     <artifactId>reactor-guice</artifactId>
-    <version>0.0.9-SNAPSHOT</version>
+    <version>0.10-SNAPSHOT</version>
 </dependency>
 ```
 
