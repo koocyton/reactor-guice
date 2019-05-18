@@ -161,7 +161,7 @@ public class AppServerTest {
                 .attr("account", "account")
                 .attr("password", "password")
                 .attr("name", "name")
-                .file("image", new File("D:\\project\\reactor-guice\\application.properties"))
+                .file("image", new File("C:\\Users\\koocyton\\Pictures\\cloud.jpg"))
             )
             .responseSingle((res, content) -> content)
             .map(byteBuf -> byteBuf.toString(CharsetUtil.UTF_8))

@@ -18,14 +18,12 @@ import reactor.netty.http.server.HttpServerResponse;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.ObjectOutputStream;
+import java.io.*;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.nio.file.Files;
 import java.util.*;
 
 public class HandlePublisher {
@@ -352,23 +350,15 @@ public class HandlePublisher {
         }
         // one
         else if (clazz == File.class) {
-            File saveDirPath = new File(path);
-            if (saveDirPath.isDirectory()) {
-                File file = new File(saveDirPath.getPath() + "/aaa.txt");
-                FileOutputStream out;
-                try {
-                    out = new FileOutputStream(file);
-                    ObjectOutputStream objOut=new ObjectOutputStream(out);
-                    objOut.write(value.get(0).get());
-                    objOut.flush();
-                    objOut.close();
-                    return clazz.cast(file);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    return clazz.cast(null);
-                }
+            File file = new File(path + "/aaa.jpg");
+            try (FileOutputStream fs = new FileOutputStream(file)) {
+                fs.write(value.get(0).get());
+                fs.close();
+                return clazz.cast(file);
             }
-            return null;
+            catch(Exception e) {
+                return null;
+            }
         }
         // more
         else if (clazz == File[].class) {
