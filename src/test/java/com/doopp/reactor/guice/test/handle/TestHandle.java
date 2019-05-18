@@ -1,5 +1,6 @@
 package com.doopp.reactor.guice.test.handle;
 
+import com.doopp.reactor.guice.annotation.FileParam;
 import com.doopp.reactor.guice.test.entity.User;
 import com.doopp.reactor.guice.test.proto.hello.Hello;
 import com.doopp.reactor.guice.test.proto.hello.HelloModel;
@@ -10,6 +11,8 @@ import com.doopp.reactor.guice.test.service.MapApiService;
 import com.doopp.reactor.guice.test.service.TestService;
 import com.google.inject.Inject;
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.http.multipart.FileUpload;
+import io.netty.handler.codec.http.multipart.MemoryFileUpload;
 import io.netty.util.CharsetUtil;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
@@ -109,7 +112,8 @@ public class TestHandle {
 
     @POST
     @Path("/test/post-bean")
-    public Mono<User> testPostBean(@BeanParam User user) {
+    public Mono<User> testPostBean(@BeanParam User user, @FileParam(value="image", path = "d:\\") FileUpload file) {
+        System.out.println(file.retain());
         return Mono.just(user);
     }
 

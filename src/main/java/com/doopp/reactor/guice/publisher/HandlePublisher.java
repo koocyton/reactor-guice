@@ -18,6 +18,10 @@ import reactor.netty.http.server.HttpServerResponse;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -232,7 +236,8 @@ public class HandlePublisher {
             // upload file
             else if (parameter.getAnnotation(FileParam.class) != null) {
                 String annotationKey = parameter.getAnnotation(FileParam.class).value();
-                objectList.add(classCastFileUploadValue(fileParams.get(annotationKey), parameterClazz));
+                String annotationPath = parameter.getAnnotation(FileParam.class).path();
+                objectList.add(classCastFileUploadValue(fileParams.get(annotationKey), annotationPath, parameterClazz));
             }
             // BeanParam
             else if (parameter.getAnnotation(BeanParam.class) != null) {
@@ -340,10 +345,41 @@ public class HandlePublisher {
         return String.valueOf(cs);
     }
 
-    private <T> T classCastFileUploadValue(List<MemoryFileUpload> value, Class<T> clazz) {
+    private <T> T classCastFileUploadValue(List<MemoryFileUpload> value, String path, Class<T> clazz) {
         // if value is null
         if (value == null) {
             return clazz.cast(null);
+        }
+        // one
+        else if (clazz == File.class) {
+            File saveDirPath = new File(path);
+            if (saveDirPath.isDirectory()) {
+                File file = new File(saveDirPath.getPath() + "/aaa.txt");
+                FileOutputStream out;
+                try {
+                    out = new FileOutputStream(file);
+                    ObjectOutputStream objOut=new ObjectOutputStream(out);
+                    objOut.writeObject(value.get(0).get());
+                    objOut.flush();
+                    objOut.close();
+                    return clazz.cast(file);
+                } catch (IOException e) {
+                    return clazz.cast(null);
+                }
+            }
+            return null;
+        }
+        // more
+        else if (clazz == File[].class) {
+            return null;
+        }
+        // one
+        else if (clazz == FileUpload.class) {
+            return clazz.cast(value.get(0));
+        }
+        // more
+        else if (clazz == FileUpload[].class) {
+            return clazz.cast(value.toArray(new FileUpload[0]));
         }
         // one
         else if (clazz == MemoryFileUpload.class) {

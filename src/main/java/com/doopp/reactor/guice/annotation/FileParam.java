@@ -9,6 +9,6 @@ public @interface FileParam {
 
     String value();
 
-    String types() default "";
+    String path() default "";
 }
 
