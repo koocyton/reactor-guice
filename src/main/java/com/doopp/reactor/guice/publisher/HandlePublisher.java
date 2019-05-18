@@ -244,7 +244,7 @@ public class HandlePublisher {
                 }
                 // if protobuf request
                 else if (requestContentType.equals(ProtobufMediaType)) {
-                    objectList.add(protobufBeanParam(content, (Class<? extends com.google.protobuf.GeneratedMessageV3>) parameterClazz));
+                    objectList.add(protobufBeanParam(content, parameterClazz));
                 }
                 // default is form request
                 else {
@@ -280,7 +280,7 @@ public class HandlePublisher {
         return httpMessageConverter.fromJson(new String(byteArray), parameterClazz);
     }
 
-    private Object protobufBeanParam(ByteBuf content, Class<? extends com.google.protobuf.GeneratedMessageV3> parameterClazz) {
+    private Object protobufBeanParam(ByteBuf content, Class<?> parameterClazz) {
         try {
             Method method = parameterClazz.getMethod("parseFrom", byte[].class);
             byte[] bytes = new byte[content.readableBytes()];

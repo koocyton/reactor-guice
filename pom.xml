@@ -76,21 +76,7 @@
             <groupId>com.google.inject</groupId>
             <artifactId>guice</artifactId>
             <version>4.2.2</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>com.google.guava</groupId>
-                    <artifactId>guava</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
-
-        <!-- Guava -->
-        <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-            <version>27.1-jre</version>
-        </dependency>
-
 
         <!-- Reactor Netty -->
         <dependency>
@@ -165,6 +151,7 @@
     </dependencies>
 
     <build>
+        <pluginManagement>
         <plugins>
             <!--生成Source jar文件-->
             <plugin>
@@ -233,6 +220,7 @@
                 </configuration>
             </plugin>
         </plugins>
+        </pluginManagement>
     </build>
 
 </project>
