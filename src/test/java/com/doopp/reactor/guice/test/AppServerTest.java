@@ -2,7 +2,6 @@ package com.doopp.reactor.guice.test;
 
 import com.doopp.reactor.guice.ReactorGuiceServer;
 import com.doopp.reactor.guice.test.proto.hello.Hello;
-import com.doopp.reactor.guice.test.util.MyApiGatewayDispatcher;
 import com.doopp.reactor.guice.test.util.MyGsonHttpMessageConverter;
 import com.doopp.reactor.guice.view.FreemarkTemplateDelegate;
 import com.google.inject.*;
@@ -10,21 +9,15 @@ import com.google.inject.name.Names;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.util.CharsetUtil;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.FluxProcessor;
-import reactor.core.publisher.Mono;
-import reactor.core.publisher.ReplayProcessor;
-import reactor.netty.NettyPipeline;
 import reactor.netty.http.client.HttpClient;
 
 import javax.ws.rs.core.MediaType;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.time.Duration;
 import java.util.Properties;
 
 public class AppServerTest {
