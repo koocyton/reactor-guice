@@ -162,6 +162,7 @@ public class AppServerTest {
                 .attr("password", "password")
                 .attr("name", "name")
                 .file("image", new File("C:\\Users\\koocyton\\Pictures\\cloud.jpg"))
+                .file("image", new File("C:\\Users\\koocyton\\Pictures\\st.jpg"))
             )
             .responseSingle((res, content) -> content)
             .map(byteBuf -> byteBuf.toString(CharsetUtil.UTF_8))

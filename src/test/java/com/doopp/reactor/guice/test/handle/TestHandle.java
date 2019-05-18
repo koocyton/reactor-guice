@@ -113,8 +113,7 @@ public class TestHandle {
 
     @POST
     @Path("/test/post-bean")
-    public Mono<User> testPostBean(@BeanParam User user, @FileParam(value="image", path = "d:\\") File file) {
-        System.out.println(file);
+    public Mono<User> testPostBean(@BeanParam User user, @FileParam(value="image", path = "C:\\Users\\koocyton\\Desktop") File[] file) {
         return Mono.just(user);
     }
 

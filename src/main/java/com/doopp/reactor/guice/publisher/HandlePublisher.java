@@ -23,7 +23,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
-import java.nio.file.Files;
 import java.util.*;
 
 public class HandlePublisher {
@@ -161,7 +160,7 @@ public class HandlePublisher {
                                   Map<String, List<String>> questParams,
                                   Map<String, List<String>> formParams,
                                   Map<String, List<MemoryFileUpload>> fileParams
-    ) throws IllegalAccessException, InstantiationException, InvocationTargetException {
+    ) throws IllegalAccessException, InstantiationException, InvocationTargetException, IOException {
 
         // values of method parameters
         ArrayList<Object> objectList = new ArrayList<>();
@@ -311,8 +310,7 @@ public class HandlePublisher {
                 Method parameterMethod = parameterObject.getClass().getMethod("set" + captureName(parameterField.getName()), parameterField.getType());
                 parameterMethod.invoke(parameterObject, classCastStringValue(formParams.get(parameterField.getName()), parameterField.getType()));
             }
-            catch(NoSuchMethodException ignored) {
-            }
+            catch(NoSuchMethodException ignored) {}
         }
         return parameterObject;
 
@@ -343,26 +341,37 @@ public class HandlePublisher {
         return String.valueOf(cs);
     }
 
-    private <T> T classCastFileUploadValue(List<MemoryFileUpload> value, String path, Class<T> clazz) {
+    private <T> T classCastFileUploadValue(List<MemoryFileUpload> value, String path, Class<T> clazz) throws IOException {
         // if value is null
         if (value == null) {
             return clazz.cast(null);
         }
         // one
         else if (clazz == File.class) {
-            File file = new File(path + "/aaa.jpg");
+            String[] fileNameSplit = value.get(0).getFilename().split("\\.");
+            String fileName = fileNameSplit.length<=1
+                ? UUID.randomUUID().toString()
+                : UUID.randomUUID().toString() + "." + fileNameSplit[fileNameSplit.length-1];
+            File file = new File(path + "/" + fileName);
             try (FileOutputStream fs = new FileOutputStream(file)) {
                 fs.write(value.get(0).get());
-                fs.close();
-                return clazz.cast(file);
             }
-            catch(Exception e) {
-                return null;
-            }
+            return clazz.cast(file);
         }
         // more
         else if (clazz == File[].class) {
-            return null;
+            ArrayList<File> files = new ArrayList<>();
+            for (int ii=0; ii<value.size(); ii++) {
+                String[] fileNameSplit = value.get(ii).getFilename().split("\\.");
+                String fileName = fileNameSplit.length<=1
+                    ? UUID.randomUUID().toString()
+                    : UUID.randomUUID().toString() + "." + fileNameSplit[fileNameSplit.length-1];
+                files.add(ii, new File(path + "/" + fileName));
+                try (FileOutputStream fs = new FileOutputStream(files.get(ii))) {
+                    fs.write(value.get(ii).get());
+                }
+            }
+            return clazz.cast(files.toArray(new File[0]));
         }
         // one
         else if (clazz == FileUpload.class) {
