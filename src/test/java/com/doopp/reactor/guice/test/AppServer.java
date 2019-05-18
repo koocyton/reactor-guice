@@ -9,18 +9,24 @@ import com.google.inject.name.Names;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.util.CharsetUtil;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.FluxProcessor;
+import reactor.core.publisher.Mono;
+import reactor.core.publisher.ReplayProcessor;
+import reactor.netty.NettyPipeline;
 import reactor.netty.http.client.HttpClient;
 
 import javax.ws.rs.core.MediaType;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Properties;
 
-public class AppServerTest {
+public class AppServer {
 
     @Test
     public void testServer() throws IOException {
@@ -30,20 +36,20 @@ public class AppServerTest {
         // properties.load(new FileInputStream("/Developer/Project/reactor-guice/application.properties"));
 
         Injector injector = Guice.createInjector(
-                binder -> Names.bindProperties(binder, properties),
-                new Module()
+            binder -> Names.bindProperties(binder, properties),
+            new Module()
         );
 
         String host = properties.getProperty("server.host", "127.0.0.1");
         int port = Integer.valueOf(properties.getProperty("server.port", "8081"));
 
-        System.out.println(">>> http://"+host+":"+port+"/");
-        System.out.println(">>> http://"+host+":"+port+"/kreactor/test/json");
-        System.out.println(">>> http://"+host+":"+port+"/kreactor/test/html/123");
-        System.out.println(">>> http://"+host+":"+port+"/kreactor/test/image");
-        System.out.println(">>> http://"+host+":"+port+"/kreactor/test/points");
-        System.out.println(">>> http://"+host+":"+port+"/kreactor/test/redirect");
-        System.out.println(">>> http://"+host+":"+port+"/kreactor/test/params\n");
+        System.out.println(">>> http://" + host + ":" + port + "/");
+        System.out.println(">>> http://" + host + ":" + port + "/kreactor/test/json");
+        System.out.println(">>> http://" + host + ":" + port + "/kreactor/test/html/123");
+        System.out.println(">>> http://" + host + ":" + port + "/kreactor/test/image");
+        System.out.println(">>> http://" + host + ":" + port + "/kreactor/test/points");
+        System.out.println(">>> http://" + host + ":" + port + "/kreactor/test/redirect");
+        System.out.println(">>> http://" + host + ":" + port + "/kreactor/test/params\n");
 
 
         ReactorGuiceServer.create()
@@ -76,8 +82,7 @@ public class AppServerTest {
 
         try {
             System.out.println(Hello.parseFrom(bt));
-        }
-        catch(Exception e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -94,7 +99,7 @@ public class AppServerTest {
         ByteBuf buf = Unpooled.wrappedBuffer(builder.build().toByteArray()).retain();
 
         String hhe = HttpClient.create()
-            .headers(headers->{
+            .headers(headers -> {
                 headers.add(HttpHeaderNames.CONTENT_TYPE, "application/x-protobuf");
             })
             .post()
@@ -113,15 +118,15 @@ public class AppServerTest {
         ByteBuf buf = Unpooled.wrappedBuffer("{\"id\":\"123123121312312\", \"name\":\"wuyi\"}".getBytes()).retain();
 
         String hhe = HttpClient.create()
-                .headers(headers->{
-                    headers.add(HttpHeaderNames.CONTENT_TYPE, MediaType.APPLICATION_JSON);
-                })
-                .post()
-                .uri("http://127.0.0.1:8083/kreactor/test/post-bean")
-                .send(Flux.just(buf))
-                .responseSingle((res, content) -> content)
-                .map(byteBuf -> byteBuf.toString(CharsetUtil.UTF_8))
-                .block();
+            .headers(headers -> {
+                headers.add(HttpHeaderNames.CONTENT_TYPE, MediaType.APPLICATION_JSON);
+            })
+            .post()
+            .uri("http://127.0.0.1:8083/kreactor/test/post-bean")
+            .send(Flux.just(buf))
+            .responseSingle((res, content) -> content)
+            .map(byteBuf -> byteBuf.toString(CharsetUtil.UTF_8))
+            .block();
 
         System.out.println(hhe);
     }
@@ -162,5 +167,41 @@ public class AppServerTest {
             .block();
 
         System.out.println(hhe);
+    }
+
+
+    @Test
+    public void testWebsocketClient() throws IOException {
+        Properties properties = new Properties();
+        properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
+        // properties.load(new FileInputStream("/Developer/Project/reactor-guice/application.properties"));
+
+        int port = Integer.valueOf(properties.getProperty("server.port", "8081"));
+
+        FluxProcessor<String, String> client = ReplayProcessor.<String>create().serialize();
+
+        Flux.interval(Duration.ofMillis(1000))
+            .map(Object::toString)
+            .subscribe(client::onNext);
+
+        HttpClient.create()
+            // .port(port)
+            // .wiretap(true)
+            .websocket()
+            .uri("ws://127.0.0.1:8083/kreactor/ws")
+            .handle((in, out) ->
+                out.withConnection(conn -> {
+                    in.aggregateFrames().receiveFrames().map(frames -> {
+                        if (frames instanceof TextWebSocketFrame) {
+                            System.out.println(((TextWebSocketFrame) frames).text());
+                        }
+                        return Mono.empty();
+                    })
+                        .subscribe();
+                })
+                    .options(NettyPipeline.SendOptions::flushOnEach)
+                    .sendString(client)
+            )
+            .blockLast();
     }
 }
