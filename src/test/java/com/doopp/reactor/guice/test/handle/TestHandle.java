@@ -19,6 +19,7 @@ import reactor.netty.http.client.HttpClient;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
+import java.io.File;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -112,8 +113,8 @@ public class TestHandle {
 
     @POST
     @Path("/test/post-bean")
-    public Mono<User> testPostBean(@BeanParam User user, @FileParam(value="image", path = "d:\\") FileUpload file) {
-        System.out.println(file.retain());
+    public Mono<User> testPostBean(@BeanParam User user, @FileParam(value="image", path = "d:\\") File file) {
+        System.out.println(file);
         return Mono.just(user);
     }
 

@@ -359,11 +359,12 @@ public class HandlePublisher {
                 try {
                     out = new FileOutputStream(file);
                     ObjectOutputStream objOut=new ObjectOutputStream(out);
-                    objOut.writeObject(value.get(0).get());
+                    objOut.write(value.get(0).get());
                     objOut.flush();
                     objOut.close();
                     return clazz.cast(file);
                 } catch (IOException e) {
+                    e.printStackTrace();
                     return clazz.cast(null);
                 }
             }
