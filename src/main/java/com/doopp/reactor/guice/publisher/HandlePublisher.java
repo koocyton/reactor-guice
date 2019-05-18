@@ -6,7 +6,6 @@ import com.doopp.reactor.guice.annotation.FileParam;
 import com.doopp.reactor.guice.json.HttpMessageConverter;
 import com.doopp.reactor.guice.view.ModelMap;
 import com.doopp.reactor.guice.view.TemplateDelegate;
-import com.google.common.base.Strings;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.*;
@@ -26,6 +25,8 @@ import java.lang.reflect.Parameter;
 import java.util.*;
 
 public class HandlePublisher {
+
+    private static String ProtobufMediaType = "application/x-protobuf";
 
     private HttpMessageConverter httpMessageConverter;
 
@@ -164,11 +165,16 @@ public class HandlePublisher {
         ArrayList<Object> objectList = new ArrayList<>();
 
         // is a json request
-        boolean isJsonRequest = false;
+        String requestContentType = "";
         List<String> requestHeaderContentTypes = request.requestHeaders().getAll(HttpHeaderNames.CONTENT_TYPE);
         for (String contentType : requestHeaderContentTypes) {
             if (contentType.contains(MediaType.APPLICATION_JSON)) {
-                isJsonRequest = true;
+                requestContentType = MediaType.APPLICATION_JSON;
+                break;
+            }
+            else if (contentType.contains(ProtobufMediaType)) {
+                requestContentType = ProtobufMediaType;
+                break;
             }
         }
 
@@ -231,8 +237,12 @@ public class HandlePublisher {
             // BeanParam
             else if (parameter.getAnnotation(BeanParam.class) != null) {
                 // if json request
-                if (isJsonRequest) {
+                if (requestContentType.equals(MediaType.APPLICATION_JSON)) {
                     objectList.add(jsonBeanParam(content, parameterClazz));
+                }
+                // if protobuf request
+                else if (requestContentType.equals(ProtobufMediaType)) {
+                    objectList.add(protobufBeanParam(content, (Class<? extends com.google.protobuf.GeneratedMessageV3>) parameterClazz));
                 }
                 // default is form request
                 else {
@@ -266,6 +276,19 @@ public class HandlePublisher {
         // Type type = TypeToken.get(parameter.getAnnotatedType().getType()).getType();
         // objectList.add((new Gson()).fromJson(new String(byteArray), parameter.getAnnotatedType().getType()));
         return httpMessageConverter.fromJson(new String(byteArray), parameterClazz);
+    }
+
+    private Object protobufBeanParam(ByteBuf content, Class<? extends com.google.protobuf.GeneratedMessageV3> parameterClazz) {
+        try {
+            Object object = parameterClazz.newInstance();
+            Method method = object.getClass().getMethod("parseFrom", byte[].class);
+            byte[] bytes = new byte[content.readableBytes()];
+            content.readBytes(bytes);
+            return method.invoke(parameterClazz, (Object) bytes);
+        }
+        catch (Exception e) {
+            return null;
+        }
     }
 
     private Object formBeanParam(HttpServerRequest request,

@@ -89,6 +89,31 @@ public class AppServerTest {
         }
     }
 
+
+    @Test
+    public void testPostProtobufBean() {
+
+        Hello.Builder builder = Hello.newBuilder();
+        builder.setId(123);
+        builder.setName("wuyi");
+        builder.setEmail("wuyi@doopp.com");
+
+        ByteBuf buf = Unpooled.wrappedBuffer(builder.build().toByteArray()).retain();
+
+        String hhe = HttpClient.create()
+            .headers(headers->{
+                headers.add(HttpHeaderNames.CONTENT_TYPE, "application/x-protobuf");
+            })
+            .post()
+            .uri("http://127.0.0.1:8083/kreactor/test/post-bean")
+            .send(Flux.just(buf))
+            .responseSingle((res, content) -> content)
+            .map(byteBuf -> byteBuf.toString(CharsetUtil.UTF_8))
+            .block();
+
+        System.out.println(hhe);
+    }
+
     @Test
     public void testPostJsonBean() {
 
