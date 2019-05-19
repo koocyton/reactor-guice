@@ -13,13 +13,13 @@ public class WsTestHandle extends AbstractWebSocketServerHandle {
 
     @Override
     public void connected(Channel channel) {
-        System.out.println(channel.id());
+        // System.out.println(channel.id());
         super.connected(channel);
     }
 
     @Override
     public void onTextMessage(TextWebSocketFrame frame, Channel channel) {
-        System.out.println(frame.text());
+        // System.out.println(frame.text());
         super.onTextMessage(frame, channel);
     }
 }

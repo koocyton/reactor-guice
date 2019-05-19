@@ -47,7 +47,9 @@ public class WebsocketPublisher {
         // channel
         Channel channel = connect.channel();
         // on disconnect
-        connect.onDispose().subscribe(null, null, () -> handleObject.disconnect(channel));
+        connect.onDispose().subscribe(null, null, () -> {
+            handleObject.disconnect(channel);
+        });
         // set requestAttribute to channel
         channel.attr(RequestAttribute.REQUEST_ATTRIBUTE).set(requestAttribute);
         // set channel to requestAttribute

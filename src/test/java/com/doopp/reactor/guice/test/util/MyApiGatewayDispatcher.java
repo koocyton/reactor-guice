@@ -1,4 +1,4 @@
-package com.doopp.reactor.guice.test;
+package com.doopp.reactor.guice.test.util;
 
 import com.doopp.reactor.guice.ApiGatewayDispatcher;
 

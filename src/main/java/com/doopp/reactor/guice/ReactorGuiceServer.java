@@ -303,15 +303,6 @@ public class ReactorGuiceServer {
             });
     }
 
-
-    /**
-     * 处理 filter
-     *
-     * @param req              HttpServerRequest
-     * @param resp             HttpServerResponse
-     * @param requestAttribute 当次请求
-     * @return Mono
-     */
     private Mono<Object> doFilter(HttpServerRequest req, HttpServerResponse resp, RequestAttribute requestAttribute) {
         // loop filter map
         for (String key : this.filters.keySet()) {
@@ -323,11 +314,6 @@ public class ReactorGuiceServer {
         return Mono.just(requestAttribute);
     }
 
-    /**
-     * 获取 handle 的类名
-     *
-     * @return Set<String>
-     */
     private Set<String> getHandleClassesName() {
         // init result
         Set<String> handleClassesName = new HashSet<>();

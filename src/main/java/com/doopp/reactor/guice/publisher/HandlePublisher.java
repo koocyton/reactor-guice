@@ -2,7 +2,7 @@ package com.doopp.reactor.guice.publisher;
 
 import com.doopp.reactor.guice.RequestAttribute;
 import com.doopp.reactor.guice.annotation.RequestAttributeParam;
-import com.doopp.reactor.guice.annotation.UploadFilesParam;
+import com.doopp.reactor.guice.annotation.FileParam;
 import com.doopp.reactor.guice.json.HttpMessageConverter;
 import com.doopp.reactor.guice.view.ModelMap;
 import com.doopp.reactor.guice.view.TemplateDelegate;
@@ -18,11 +18,16 @@ import reactor.netty.http.server.HttpServerResponse;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
+import java.io.*;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.*;
 
 public class HandlePublisher {
+
+    private static String ProtobufMediaType = "application/x-protobuf";
 
     private HttpMessageConverter httpMessageConverter;
 
@@ -47,67 +52,86 @@ public class HandlePublisher {
         String contentType = methodProductsValue(method);
         // result
         return this.invokeMethod(
-                    req, resp, method, handleObject, (RequestAttribute) requestAttribute, modelMap
-                )
-                .map(result->{
-                    resp.header(HttpHeaderNames.CONTENT_TYPE, contentType);
-                    if (result instanceof String && ((String) result).startsWith("redirect:")) {
-                        String uri = ((String) result).substring(9);
-                        return resp.sendRedirect(uri);
-                    }
+            req, resp, method, handleObject, (RequestAttribute) requestAttribute, modelMap
+        )
+            .map(result -> {
+                resp.header(HttpHeaderNames.CONTENT_TYPE, contentType);
+                if (result instanceof String && ((String) result).startsWith("redirect:")) {
+                    String uri = ((String) result).substring(9);
+                    return resp.sendRedirect(uri);
+                }
 
-                    // byte[] binary
-                    if (result instanceof byte[]) {
-                        return Unpooled.wrappedBuffer((byte[]) result).retain();
+                // byte[] binary
+                if (result instanceof byte[]) {
+                    return Unpooled.wrappedBuffer((byte[]) result).retain();
+                }
+                // ByteBuf binary
+                else if (result instanceof ByteBuf) {
+                    return ((ByteBuf) result).retain();
+                }
+                // String
+                else if (result instanceof String && (contentType.contains(MediaType.TEXT_HTML) || contentType.contains(MediaType.TEXT_PLAIN))) {
+                    if (this.templateDelegate == null) {
+                        return result;
                     }
-                    // ByteBuf binary
-                    else if (result instanceof ByteBuf) {
-                        return ((ByteBuf) result).retain();
+                    return this.templateDelegate.template(handleObject, modelMap, (String) result);
+                }
+                // json
+                else {
+                    if (this.httpMessageConverter == null) {
+                        resp.status(HttpResponseStatus.INTERNAL_SERVER_ERROR);
+                        return "{\"err_code\":500, \"err_msg\":\"A Message Converter instance is required\", \"data\":null}";
                     }
-                    // String
-                    else if (result instanceof String && (contentType.contains(MediaType.TEXT_HTML) || contentType.contains(MediaType.TEXT_PLAIN))) {
-                        if (this.templateDelegate==null) {
-                            return result;
-                        }
-                        return this.templateDelegate.template(handleObject, modelMap, (String) result);
-                    }
-                    // json
-                    else {
-                        if (this.httpMessageConverter == null) {
-                            resp.status(HttpResponseStatus.INTERNAL_SERVER_ERROR);
-                            return "{\"err_code\":500, \"err_msg\":\"A Message Converter instance is required\", \"data\":null}";
-                        }
-                        return this.httpMessageConverter.toJson(result);
-                    }
-                });
+                    return this.httpMessageConverter.toJson(result);
+                }
+            });
     }
 
-    /**
-     * invoke the method
-     *
-     * @param req HttpServerRequest
-     * @param resp HttpServerResponse
-     * @param method Method
-     * @param handleObject Object
-     * @param requestAttribute RequestAttribute
-     * @param modelMap ModelMap
-     * @return Mono<?>
-     */
-    private Mono<?> invokeMethod(HttpServerRequest req, HttpServerResponse resp, Method method, Object handleObject, RequestAttribute requestAttribute, ModelMap modelMap) {
-        if (req.method() == HttpMethod.POST || req.method() == HttpMethod.PUT || req.method() == HttpMethod.DELETE) {
-            return req.receive()
-                    .aggregate()
-                    .flatMap(byteBuf -> {
-                        try {
-                            Object result = method.invoke(handleObject, methodParams(method, req, resp, requestAttribute, modelMap, byteBuf));
-                            return (result instanceof Mono<?>) ? (Mono<?>) result : Mono.just(result);
-                        } catch (Exception e) {
-                            return Mono.error(e);
-                        }
-                    });
+    private Mono<?> invokeMethod(HttpServerRequest request, HttpServerResponse response, Method method, Object handleObject, RequestAttribute requestAttribute, ModelMap modelMap) {
+
+        // value of url quest
+        Map<String, List<String>> questParams = new HashMap<>();
+        // values of form post
+        Map<String, List<String>> formParams = new HashMap<>();
+        // values of file upload
+        Map<String, List<MemoryFileUpload>> fileParams = new HashMap<>();
+        // get results
+        this.queryParams(request, questParams);
+
+        if (request.method() == HttpMethod.POST || request.method() == HttpMethod.PUT || request.method() == HttpMethod.DELETE) {
+            return request.receive()
+                .aggregate()
+                .flatMap(byteBuf -> {
+                    try {
+                        this.formParams(request, byteBuf, formParams, fileParams);
+                        Object result = method.invoke(handleObject, methodParams(method,
+                                request,
+                                response,
+                                requestAttribute,
+                                modelMap,
+                                byteBuf,
+                                questParams,
+                                formParams,
+                                fileParams
+                        ));
+                        return (result instanceof Mono<?>) ? (Mono<?>) result : Mono.just(result);
+                    } catch (Exception e) {
+                        return Mono.error(e);
+                    }
+                });
         } else {
             try {
-                Object result = method.invoke(handleObject, methodParams(method, req, resp, requestAttribute, modelMap, null));
+                this.formParams(request, null, formParams, fileParams);
+                Object result = method.invoke(handleObject, methodParams(method,
+                        request,
+                        response,
+                        requestAttribute,
+                        modelMap,
+                        null,
+                        questParams,
+                        formParams,
+                        fileParams
+                ));
                 return (result instanceof Mono<?>) ? (Mono<?>) result : Mono.just(result);
             } catch (Exception e) {
                 return Mono.error(e);
@@ -117,7 +141,7 @@ public class HandlePublisher {
 
     public String methodProductsValue(Method method) {
         String contentType = MediaType.TEXT_HTML;
-        if (method!=null &&  method.isAnnotationPresent(Produces.class)) {
+        if (method != null && method.isAnnotationPresent(Produces.class)) {
             StringBuilder _contentType = new StringBuilder();
             for (String mediaType : method.getAnnotation(Produces.class).value()) {
                 _contentType.append((_contentType.toString().equals("")) ? mediaType : "; " + mediaType);
@@ -127,19 +151,36 @@ public class HandlePublisher {
         return contentType;
     }
 
-    private Object[] methodParams(Method method, HttpServerRequest request, HttpServerResponse response, RequestAttribute requestAttribute, ModelMap modelMap, ByteBuf content) {
+    private Object[] methodParams(Method method,
+                                  HttpServerRequest request,
+                                  HttpServerResponse response,
+                                  RequestAttribute requestAttribute,
+                                  ModelMap modelMap,
+                                  ByteBuf content,
+                                  Map<String, List<String>> questParams,
+                                  Map<String, List<String>> formParams,
+                                  Map<String, List<MemoryFileUpload>> fileParams
+    ) throws IllegalAccessException, InstantiationException, InvocationTargetException, IOException {
+
+        // values of method parameters
         ArrayList<Object> objectList = new ArrayList<>();
 
-        Map<String, List<String>> questParams = new HashMap<>();
-        Map<String, List<String>> formParams = new HashMap<>();
-        Map<String, List<MemoryFileUpload>> fileParams = new HashMap<>();
-
-        this.queryParams(request, questParams);
-        this.formParams(request, content, formParams, fileParams);
+        // is a json request
+        String requestContentType = "";
+        List<String> requestHeaderContentTypes = request.requestHeaders().getAll(HttpHeaderNames.CONTENT_TYPE);
+        for (String contentType : requestHeaderContentTypes) {
+            if (contentType.contains(MediaType.APPLICATION_JSON)) {
+                requestContentType = MediaType.APPLICATION_JSON;
+                break;
+            }
+            else if (contentType.contains(ProtobufMediaType)) {
+                requestContentType = ProtobufMediaType;
+                break;
+            }
+        }
 
         for (Parameter parameter : method.getParameters()) {
             Class<?> parameterClazz = parameter.getType();
-            ArrayList<String> annotationVal = new ArrayList<>();
             // RequestAttribute
             if (parameterClazz == RequestAttribute.class) {
                 objectList.add(requestAttribute);
@@ -156,51 +197,69 @@ public class HandlePublisher {
             else if (parameterClazz == ModelMap.class) {
                 objectList.add(modelMap);
             }
-            // upload file
-            else if (parameter.getAnnotation(UploadFilesParam.class) != null) {
-                String annotationKey = parameter.getAnnotation(UploadFilesParam.class).value();
-                objectList.add(fileParams.get(annotationKey));
-            }
             // RequestAttribute item
             else if (parameter.getAnnotation(RequestAttributeParam.class) != null) {
                 String annotationKey = parameter.getAnnotation(RequestAttributeParam.class).value();
                 objectList.add(requestAttribute.getAttribute(annotationKey, parameterClazz));
             }
-            // CookieParam
+            // CookieParam : Set<Cookie>
             else if (parameter.getAnnotation(CookieParam.class) != null) {
                 String annotationKey = parameter.getAnnotation(CookieParam.class).value();
                 // Collections.addAll(annotationVal, request.cookies().get(annotationKey).toString());
                 objectList.add(request.cookies().get(annotationKey));
             }
-            // HeaderParam
+            // HeaderParam : String
             else if (parameter.getAnnotation(HeaderParam.class) != null) {
                 String annotationKey = parameter.getAnnotation(HeaderParam.class).value();
-                // Collections.addAll(annotationVal, request.requestHeaders().get(annotationKey));
                 objectList.add(request.requestHeaders().get(annotationKey));
             }
             // PathParam
             else if (parameter.getAnnotation(PathParam.class) != null) {
                 String annotationKey = parameter.getAnnotation(PathParam.class).value();
-                Collections.addAll(annotationVal, request.param(annotationKey));
-                objectList.add(paramTypeValue(annotationVal, parameterClazz));
+                List<String> annotationVal = new ArrayList<>();
+                annotationVal.add(request.param(annotationKey));
+                objectList.add(classCastStringValue(annotationVal, parameterClazz));
             }
             // QueryParam
             else if (parameter.getAnnotation(QueryParam.class) != null) {
                 String annotationKey = parameter.getAnnotation(QueryParam.class).value();
-                objectList.add(paramTypeValue(questParams.get(annotationKey), parameterClazz));
+                objectList.add(classCastStringValue(questParams.get(annotationKey), parameterClazz));
             }
             // FormParam
             else if (parameter.getAnnotation(FormParam.class) != null) {
                 String annotationKey = parameter.getAnnotation(FormParam.class).value();
-                objectList.add(paramTypeValue(formParams.get(annotationKey), parameterClazz));
+                objectList.add(classCastStringValue(formParams.get(annotationKey), parameterClazz));
+            }
+            // upload file
+            else if (parameter.getAnnotation(FileParam.class) != null) {
+                String annotationKey = parameter.getAnnotation(FileParam.class).value();
+                String annotationPath = parameter.getAnnotation(FileParam.class).path();
+                objectList.add(classCastFileUploadValue(fileParams.get(annotationKey), annotationPath, parameterClazz));
             }
             // BeanParam
             else if (parameter.getAnnotation(BeanParam.class) != null) {
-                byte[] byteArray = new byte[content.capacity()];
-                content.readBytes(byteArray);
-                // Type type = TypeToken.get(parameter.getAnnotatedType().getType()).getType();
-                // objectList.add((new Gson()).fromJson(new String(byteArray), parameter.getAnnotatedType().getType()));
-                objectList.add(httpMessageConverter.fromJson(new String(byteArray), parameterClazz));
+                // if json request
+                if (requestContentType.equals(MediaType.APPLICATION_JSON)) {
+                    objectList.add(jsonBeanParam(content, parameterClazz));
+                }
+                // if protobuf request
+                else if (requestContentType.equals(ProtobufMediaType)) {
+                    objectList.add(protobufBeanParam(content, parameterClazz));
+                }
+                // default is form request
+                else {
+                    objectList.add(formBeanParam(
+                        request,
+                        response,
+                        requestAttribute,
+                        modelMap,
+                        content,
+                        questParams,
+                        formParams,
+                        fileParams,
+                        parameterClazz
+                    ));
+                }
             }
             // default
             else {
@@ -210,7 +269,143 @@ public class HandlePublisher {
         return objectList.toArray();
     }
 
-    private <T> T paramTypeValue(List<String> value, Class<T> clazz) {
+    private Object jsonBeanParam(ByteBuf content, Class<?> parameterClazz) {
+        if (httpMessageConverter == null) {
+            return null;
+        }
+        byte[] byteArray = new byte[content.capacity()];
+        content.readBytes(byteArray);
+        // Type type = TypeToken.get(parameter.getAnnotatedType().getType()).getType();
+        // objectList.add((new Gson()).fromJson(new String(byteArray), parameter.getAnnotatedType().getType()));
+        return httpMessageConverter.fromJson(new String(byteArray), parameterClazz);
+    }
+
+    private Object protobufBeanParam(ByteBuf content, Class<?> parameterClazz) {
+        try {
+            Method method = parameterClazz.getMethod("parseFrom", byte[].class);
+            byte[] bytes = new byte[content.readableBytes()];
+            content.readBytes(bytes);
+            return method.invoke(parameterClazz, (Object) bytes);
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    private Object formBeanParam(HttpServerRequest request,
+                                 HttpServerResponse response,
+                                 RequestAttribute requestAttribute,
+                                 ModelMap modelMap,
+                                 ByteBuf content,
+                                 Map<String, List<String>> questParams,
+                                 Map<String, List<String>> formParams,
+                                 Map<String, List<MemoryFileUpload>> fileParams,
+                                 Class<?> parameterClazz) throws IllegalAccessException, InstantiationException, InvocationTargetException {
+
+        Object parameterObject = parameterClazz.newInstance();
+        Field[] parameterFields = parameterObject.getClass().getDeclaredFields();
+        for(Field parameterField : parameterFields) {
+            try {
+                Method parameterMethod = parameterObject.getClass().getMethod("set" + captureName(parameterField.getName()), parameterField.getType());
+                parameterMethod.invoke(parameterObject, classCastStringValue(formParams.get(parameterField.getName()), parameterField.getType()));
+            }
+            catch(NoSuchMethodException ignored) {}
+        }
+        return parameterObject;
+
+        /*
+        Method[] parameterMethods = parameterObject.getClass().getMethods();
+        for (Method parameterMethod : parameterMethods) {
+            if (parameterMethod.getName().startsWith("set")) {
+                parameterMethod.invoke(parameterObject, methodParams(parameterMethod,
+                        request,
+                        response,
+                        requestAttribute,
+                        modelMap,
+                        content,
+                        questParams,
+                        formParams,
+                        fileParams
+                ));
+            }
+        }
+        */
+
+    }
+
+    // 进行字母的ascii编码前移，效率要高于截取字符串进行转换的操作
+    private static String captureName(String str) {
+        char[] cs=str.toCharArray();
+        cs[0]-=32;
+        return String.valueOf(cs);
+    }
+
+    private <T> T classCastFileUploadValue(List<MemoryFileUpload> value, String path, Class<T> clazz) throws IOException {
+        // if value is null
+        if (value == null) {
+            return clazz.cast(null);
+        }
+        // one
+        else if (clazz == File.class) {
+            String[] fileNameSplit = value.get(0).getFilename().split("\\.");
+            String fileName = fileNameSplit.length<=1
+                ? UUID.randomUUID().toString()
+                : UUID.randomUUID().toString() + "." + fileNameSplit[fileNameSplit.length-1];
+            File file = new File(path + "/" + fileName);
+            try (FileOutputStream fs = new FileOutputStream(file)) {
+                fs.write(value.get(0).get());
+            }
+            return clazz.cast(file);
+        }
+        // more
+        else if (clazz == File[].class) {
+            ArrayList<File> files = new ArrayList<>();
+            for (int ii=0; ii<value.size(); ii++) {
+                String[] fileNameSplit = value.get(ii).getFilename().split("\\.");
+                String fileName = fileNameSplit.length<=1
+                    ? UUID.randomUUID().toString()
+                    : UUID.randomUUID().toString() + "." + fileNameSplit[fileNameSplit.length-1];
+                files.add(ii, new File(path + "/" + fileName));
+                try (FileOutputStream fs = new FileOutputStream(files.get(ii))) {
+                    fs.write(value.get(ii).get());
+                }
+            }
+            return clazz.cast(files.toArray(new File[0]));
+        }
+        // one
+        else if (clazz == FileUpload.class) {
+            return clazz.cast(value.get(0));
+        }
+        // more
+        else if (clazz == FileUpload[].class) {
+            return clazz.cast(value.toArray(new FileUpload[0]));
+        }
+        // one
+        else if (clazz == MemoryFileUpload.class) {
+            return clazz.cast(value.get(0));
+        }
+        // more
+        else if (clazz == MemoryFileUpload[].class) {
+            return clazz.cast(value.toArray(new MemoryFileUpload[0]));
+        }
+        // one byte[]
+        else if (clazz == byte[].class) {
+            return clazz.cast(value.get(0).get());
+        }
+        // more byte[]
+        else if (clazz == byte[][].class) {
+            ArrayList<byte[]> byteValues = new ArrayList<>();
+            for (MemoryFileUpload s : value) {
+                byteValues.add(s.get());
+            }
+            return clazz.cast(byteValues.toArray());
+        } else {
+            return clazz.cast(null);
+        }
+    }
+
+    private <T> T classCastStringValue(List<String> value, Class<T> clazz) {
         // if value is null
         if (value == null) {
             return clazz.cast(null);
@@ -264,7 +459,9 @@ public class HandlePublisher {
             return clazz.cast(value.toArray(new String[0]));
         }
         // default return null;
-        return clazz.cast(value);
+        else {
+            return clazz.cast(value);
+        }
     }
 
     // Get 请求
@@ -292,12 +489,11 @@ public class HandlePublisher {
                     // System.out.println(data);
                     // formParams.put(attribute.getName(), attribute.getValue());
                     List<String> formParam = formParams.get(attribute.getName());
-                    if (formParam==null) {
+                    if (formParam == null) {
                         formParam = new ArrayList<>();
                         formParam.add(attribute.getValue());
                         formParams.put(attribute.getName(), formParam);
-                    }
-                    else {
+                    } else {
                         formParam.add(attribute.getValue());
                     }
                 }
@@ -307,12 +503,11 @@ public class HandlePublisher {
                     // fileParams.put(fileUpload.getName(), fileUpload);
                     // fileParams.put(fileUpload.getName(), null);
                     List<MemoryFileUpload> fileParam = fileParams.get(fileUpload.getName());
-                    if (fileParam==null) {
+                    if (fileParam == null) {
                         fileParam = new ArrayList<>();
                         fileParam.add(fileUpload);
                         fileParams.put(fileUpload.getName(), fileParam);
-                    }
-                    else {
+                    } else {
                         fileParam.add(fileUpload);
                     }
                 }

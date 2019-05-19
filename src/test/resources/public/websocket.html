@@ -1,0 +1,60 @@
+<html>
+<head>
+  <script>
+      let WebSocketService = function(url) {
+          let protocol = /^https/.test(window.location.protocol) ? "wss\:\/\/" : "ws\:\/\/";
+          this.ws = /^ws/.test(url) ? new WebSocket(url) : new WebSocket(protocol + window.location.host + url);
+      };
+
+      WebSocketService.connect = function(url) {
+          return new WebSocketService(url);
+      };
+      WebSocketService.prototype.onOpen = function(callOpen) {
+          if (typeof callOpen==="function") {
+              this.ws.onopen = callOpen;
+          }
+          return this;
+      };
+      WebSocketService.prototype.onClose = function(callClose) {
+          if (typeof callClose==="function") {
+              this.ws.onclose = callClose;
+          }
+          return this;
+      };
+      WebSocketService.prototype.onError = function(callError) {
+          if (typeof callError==="function") {
+              this.ws.onerror = callError;
+          }
+          return this;
+      };
+      WebSocketService.prototype.onMessage = function(callMessage) {
+          if (typeof callMessage==="function") {
+              this.ws.onmessage = callMessage;
+          }
+          return this;
+      };
+      WebSocketService.prototype.send = function(message) {
+          this.ws.send(message);
+      };
+      WebSocketService.prototype.close = function() {
+          try {
+              this.ws.close();
+          }
+          catch(e) {
+
+          }
+      };
+  </script>
+</head>
+<body>
+  <script>
+    let wc = WebSocketService.connect("/kreactor/ws");
+    wc.onMessage(function(message){
+        window.console.log(message);
+    });
+    wc.onOpen(function(e){
+        wc.send("abc");
+    });
+  </script>
+</body>
+</html>

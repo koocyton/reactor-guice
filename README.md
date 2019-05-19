@@ -25,6 +25,10 @@ Reactor-guice integrates the framework of Google Guice and Reactor-netty
       fix redirect bug ... -_-
       the default JSON output returns the execution
           result directly ( remove object wrapping )
+0.10  support BeanParam for form data , json data and protobuf data
+      upload file recive support byte[] UploadFile File annotation
+      upload file use File type can auto save specified directory
+      add more test example 
 
 support udp server
 maybe use Jersey to execute dispatch
@@ -37,13 +41,13 @@ maybe use Jersey to execute dispatch
 <dependency>
     <groupId>com.doopp</groupId>
     <artifactId>reactor-guice</artifactId>
-    <version>0.0.9</version>
+    <version>0.10</version>
 </dependency>
 ```
 
 #### gradle
 ```
-compile 'com.doopp:reactor-guice:0.0.9'
+compile 'com.doopp:reactor-guice:0.10'
 ```
 
 #### use Local Maven 
@@ -52,12 +56,12 @@ mvn clean
 
 mvn package
 
-mvn install:install-file -Dfile=target/reactor-guice-0.0.9.jar -DgroupId=com.doopp.local -DartifactId=reactor-guice -Dversion=0.0.9 -Dpackaging=jar
+mvn install:install-file -Dfile=target/reactor-guice-0.10.jar -DgroupId=com.doopp.local -DartifactId=reactor-guice -Dversion=0.10 -Dpackaging=jar
 
 <dependency>
     <groupId>com.doopp.local</groupId>
     <artifactId>reactor-guice</artifactId>
-    <version>0.0.9</version>
+    <version>0.10</version>
 </dependency>
 ```
 
@@ -155,4 +159,38 @@ ReactorGuiceServer.create()
         .handlePackages("com.doopp.reactor.guice.test.handle")
         .addFilter("/", TestFilter.class)
         .launch();
+```
+
+#### Receive file update and form post
+
+```java
+
+// Server
+@POST
+@Path("/test/post-bean")
+public Mono<User> testPostBean(@BeanParam User user, @FileParam(value="image", path = "C:\\Users\\koocyton\\Desktop") File[] file) {
+    return Mono.just(user);
+}
+
+// Client Test
+@Test
+public void testFileUpload() {
+
+    String hhe = HttpClient.create()
+        .post()
+        .uri("http://127.0.0.1:8083/kreactor/test/post-bean")
+        .sendForm((req, form) -> form.multipart(true)
+            .attr("id", "123123121312312")
+            .attr("account", "account")
+            .attr("password", "password")
+            .attr("name", "name")
+            .file("image", new File("C:\\Users\\koocyton\\Pictures\\cloud.jpg"))
+            .file("image", new File("C:\\Users\\koocyton\\Pictures\\st.jpg"))
+        )
+        .responseSingle((res, content) -> content)
+        .map(byteBuf -> byteBuf.toString(CharsetUtil.UTF_8))
+        .block();
+
+    System.out.println(hhe);
+}
 ```

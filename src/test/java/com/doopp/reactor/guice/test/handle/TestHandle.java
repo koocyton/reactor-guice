@@ -1,5 +1,7 @@
 package com.doopp.reactor.guice.test.handle;
 
+import com.doopp.reactor.guice.annotation.FileParam;
+import com.doopp.reactor.guice.test.entity.User;
 import com.doopp.reactor.guice.test.proto.hello.Hello;
 import com.doopp.reactor.guice.test.proto.hello.HelloModel;
 import com.doopp.reactor.guice.view.ModelMap;
@@ -9,12 +11,15 @@ import com.doopp.reactor.guice.test.service.MapApiService;
 import com.doopp.reactor.guice.test.service.TestService;
 import com.google.inject.Inject;
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.http.multipart.FileUpload;
+import io.netty.handler.codec.http.multipart.MemoryFileUpload;
 import io.netty.util.CharsetUtil;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
+import java.io.File;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -106,25 +111,15 @@ public class TestHandle {
         return Mono.just(builder.build().toByteArray());
     }
 
-    @GET
-    @Path("/test/protobuf-client")
-    @Produces(MediaType.APPLICATION_JSON)
-    public Mono<Hello> testProtobufClient() {
-        return httpClient
-            .get()
-            .uri("http://127.0.0.1:8083/kreactor/test/protobuf")
-            .responseContent()
-            .aggregate()
-            .flatMap(byteBuf -> {
-                try {
-                    byte[] abc = new byte[byteBuf.readableBytes()];
-                    byteBuf.readBytes(abc);
-                    System.out.println(new String(abc));
-                    return Mono.just(Hello.parseFrom(abc));
-                }
-                catch(Exception e) {
-                    return Mono.error(e);
-                }
-            });
+    @POST
+    @Path("/test/post-bean")
+    public Mono<User> testPostBean(@BeanParam User user, @FileParam(value="image", path = "C:\\Users\\koocyton\\Desktop") File[] file) {
+        return Mono.just(user);
+    }
+
+    @POST
+    @Path("/test/proto-post-bean")
+    public Mono<Hello> testPostBean(@BeanParam Hello hello) {
+        return Mono.just(hello);
     }
 }
