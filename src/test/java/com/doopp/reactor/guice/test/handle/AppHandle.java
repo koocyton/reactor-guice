@@ -3,17 +3,12 @@ package com.doopp.reactor.guice.test.handle;
 import com.doopp.reactor.guice.annotation.FileParam;
 import com.doopp.reactor.guice.test.entity.User;
 import com.doopp.reactor.guice.test.proto.hello.Hello;
-import com.doopp.reactor.guice.test.proto.hello.HelloModel;
 import com.doopp.reactor.guice.view.ModelMap;
 import com.doopp.reactor.guice.StatusMessageException;
 import com.doopp.reactor.guice.test.entity.Point;
 import com.doopp.reactor.guice.test.service.MapApiService;
 import com.doopp.reactor.guice.test.service.TestService;
 import com.google.inject.Inject;
-import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.http.multipart.FileUpload;
-import io.netty.handler.codec.http.multipart.MemoryFileUpload;
-import io.netty.util.CharsetUtil;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
 
@@ -25,7 +20,7 @@ import java.util.List;
 import java.util.Map;
 
 @Path("/kreactor")
-public class TestHandle {
+public class AppHandle {
 
     @Inject
     private TestService testService;

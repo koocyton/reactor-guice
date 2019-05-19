@@ -9,7 +9,7 @@ import javax.ws.rs.Path;
 
 @Path("/kreactor/ws")
 @Singleton
-public class WsTestHandle extends AbstractWebSocketServerHandle {
+public class WebsocketHandle extends AbstractWebSocketServerHandle {
 
     @Override
     public void connected(Channel channel) {
