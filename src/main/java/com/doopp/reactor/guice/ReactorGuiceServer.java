@@ -24,7 +24,12 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -220,11 +225,27 @@ public class ReactorGuiceServer {
             }
             // static server
             else {
-                StaticFilePublisher staticFilePublisher = new StaticFilePublisher(this.jarPublicDirectories);
+//                StaticFilePublisher staticFilePublisher = new StaticFilePublisher(this.jarPublicDirectories);
                 System.out.println("   GET /** →  /public/* <static files>");
-                routes.get("/**", (req, resp) -> httpPublisher(req, resp, null, o ->
-                        staticFilePublisher.sendFile(req, resp)
-                ));
+//                routes.get("/**", (req, resp) -> httpPublisher(req, resp, null, o ->
+//                        staticFilePublisher.sendFile(req, resp)
+//                ));
+                try {
+                    URI uri = getClass().getResource("/public").toURI();
+                    java.nio.file.Path resource = Paths.get(uri);
+                    if (uri.toString().startsWith("jar:")) {
+                        Map<String, String> env = new HashMap<>();
+                        String[] array = uri.toString().split("!");
+                        FileSystem fs = FileSystems.newFileSystem(URI.create(array[0]), env);
+                        resource = fs.getPath(array[1]);
+                    }
+                    final java.nio.file.Path finalResource = resource;
+                    routes.directory("/", finalResource, resp->{
+                        return resp.header(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE)
+                            .header(HttpHeaderNames.SERVER, "RGS/" + this.version);
+                    });
+                }
+                catch(IOException | URISyntaxException ignore) {}
             }
         };
     }
