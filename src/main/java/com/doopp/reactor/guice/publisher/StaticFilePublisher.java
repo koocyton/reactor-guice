@@ -13,7 +13,11 @@ import reactor.netty.http.server.HttpServerResponse;
 
 import javax.ws.rs.core.MediaType;
 import java.io.*;
+import java.net.URI;
 import java.net.URL;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -26,6 +30,30 @@ public class StaticFilePublisher {
     }
 
     public Mono<Object> sendFile(HttpServerRequest req, HttpServerResponse resp) {
+        try {
+            URI uri = getClass().getResource("/public").toURI();
+            final java.nio.file.Path resource;
+            if (uri.toString().startsWith("jar:")) {
+                Map<String, String> env = new HashMap<>();
+                String[] array = uri.toString().split("!");
+                FileSystem fs = FileSystems.newFileSystem(URI.create(array[0]), env);
+                resource = fs.getPath(array[1]);
+                fs.close();
+            } else {
+                resource = Paths.get(uri);
+            }
+            File resourceFile = new File(resource.toUri());
+            if (resourceFile.isDirectory()) {
+                return Mono.just(resp.sendRedirect("/"));
+            }
+            return Mono.just(resp.sendFile(resource));
+        }
+        catch (Exception e) {
+            return Mono.just(resp.sendNotFound());
+        }
+    }
+
+    public Mono<Object> sendFile2(HttpServerRequest req, HttpServerResponse resp) {
 
         return Mono.create(sink -> {
             String requestUri = req.uri().replaceAll("/+", "/").split("\\?")[0].split("\\&")[0];
