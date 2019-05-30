@@ -13,7 +13,6 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.netty.DisposableServer;
-import reactor.netty.NettyOutbound;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.http.server.HttpServerResponse;
@@ -34,7 +33,6 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
@@ -44,7 +42,7 @@ public class ReactorGuiceServer {
 
     private int port = 8081;
 
-    private String version = "0.11";
+    private String version = "0.0.9";
 
     // handle
     private HandlePublisher handlePublisher = new HandlePublisher();
@@ -227,11 +225,27 @@ public class ReactorGuiceServer {
             }
             // static server
             else {
-                StaticFilePublisher staticFilePublisher = new StaticFilePublisher(this.jarPublicDirectories);
+//                StaticFilePublisher staticFilePublisher = new StaticFilePublisher(this.jarPublicDirectories);
                 System.out.println("   GET /** →  /public/* <static files>");
-                routes.get("/**", (req, resp) -> httpPublisher(req, resp, null, o ->
-                        staticFilePublisher.sendFile(req, resp)
-                ));
+//                routes.get("/**", (req, resp) -> httpPublisher(req, resp, null, o ->
+//                        staticFilePublisher.sendFile(req, resp)
+//                ));
+                try {
+                    URI uri = getClass().getResource("/public").toURI();
+                    java.nio.file.Path resource = Paths.get(uri);
+                    if (uri.toString().startsWith("jar:")) {
+                        Map<String, String> env = new HashMap<>();
+                        String[] array = uri.toString().split("!");
+                        FileSystem fs = FileSystems.newFileSystem(URI.create(array[0]), env);
+                        resource = fs.getPath(array[1]);
+                    }
+                    final java.nio.file.Path finalResource = resource;
+                    routes.directory("/", finalResource, resp->{
+                        return resp.header(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE)
+                            .header(HttpHeaderNames.SERVER, "RGS/" + this.version);
+                    });
+                }
+                catch(IOException | URISyntaxException ignore) {}
             }
         };
     }
@@ -303,9 +317,6 @@ public class ReactorGuiceServer {
             .flatMap(o -> {
                 if (o instanceof Mono<?>) {
                     return (Mono<Void>) o;
-                }
-                else if (o instanceof NettyOutbound) {
-                    return ((NettyOutbound) o).then();
                 }
                 return (o instanceof String)
                                 ? resp.sendString(Mono.just((String) o)).then()
