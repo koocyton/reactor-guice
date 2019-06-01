@@ -59,7 +59,7 @@ public class AppServer {
             .setHttpMessageConverter(new MyGsonHttpMessageConverter())
             .setTemplateDelegate(new FreemarkTemplateDelegate())
             // .setTemplateDelegate(new ThymeleafTemplateDelegate())
-            .handlePackages("com.doopp.reactor.guice.test.handle")
+            .basePackages("com.doopp.reactor.guice.test")
             .addFilter("/", TestFilter.class)
             .printError(true)
             // .crossOrigin(true)

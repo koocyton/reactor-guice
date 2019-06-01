@@ -1,6 +1,5 @@
 package com.doopp.reactor.guice.publisher;
 
-import com.google.common.io.Files;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.server.HttpServerRequest;

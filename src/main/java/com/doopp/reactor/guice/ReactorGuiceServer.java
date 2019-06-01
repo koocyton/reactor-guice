@@ -19,6 +19,7 @@ import reactor.netty.http.server.HttpServerResponse;
 import reactor.netty.http.server.HttpServerRoutes;
 
 import javax.ws.rs.*;
+import javax.ws.rs.Path;
 import javax.ws.rs.core.MediaType;
 import java.io.File;
 import java.io.IOException;
@@ -26,14 +27,11 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.URI;
 import java.net.URL;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
-import java.nio.file.Paths;
+import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.jar.JarEntry;
-import java.util.jar.JarFile;
 
 public class ReactorGuiceServer {
 
@@ -138,9 +136,9 @@ public class ReactorGuiceServer {
     }
 
     private Consumer<HttpServerRoutes> routesBuilder() {
+        Set<String> handleClassesName = this.setHandleClasses();
         // routes
         return routes -> {
-            Set<String> handleClassesName = this.getHandleClassesName();
             for (String handleClassName : handleClassesName) {
                 if (injector == null) {
                     continue;
@@ -316,97 +314,134 @@ public class ReactorGuiceServer {
         return Mono.just(requestAttribute);
     }
 
-    private File getUriFile(URI uri) {
-        final java.nio.file.Path resource;
-        if (uri.toString().startsWith("jar:")) {
-            Map<String, String> env = new HashMap<>();
-            String[] array = uri.toString().split("!");
-            FileSystem fs = FileSystems.newFileSystem(URI.create(array[0]), env);
-            resource = fs.getPath(array[1]);
-            fs.close();
-        } else {
-            resource = Paths.get(uri);
-        }
-        return resource.toFile();
-    }
+//    private File getUriFile(URI uri) {
+//        final java.nio.file.Path resource;
+//        if (uri.toString().startsWith("jar:")) {
+//            Map<String, String> env = new HashMap<>();
+//            String[] array = uri.toString().split("!");
+//            FileSystem fs = FileSystems.newFileSystem(URI.create(array[0]), env);
+//            resource = fs.getPath(array[1]);
+//            fs.close();
+//        } else {
+//            resource = Paths.get(uri);
+//        }
+//        return resource.toFile();
+//    }
 
     private Set<String> setHandleClasses() {
+
         Set<String> handleClasses = new HashSet<>();
-        Set<File> dirList = new HashSet<>();
         for(String basePackage : basePackages) {
-            URL scanUrl = this.getClass().getResource("/" + basePackage.replace(".", "/"));
-            File uriFile = getUriFile(scanUrl.toURI());
-            if (uriFile.isDirectory()) {
-                dirList.add(uriFile);
-            }
-            int ii=0;
-            while(true) {
-                File ff = dirList.iterator().next();
-                File[] fff = ff.listFiles();
-                if (fff.length<1) {
-                    break;
-                }
-                for (int mm=0; mm<fff.length; mm++) {
-                    fff[mm].isDirectory();
-                    dirList.add(fff[mm]);
-
-                }
-                if (ii>=dirList.size()) {
-                    break;
-                }
-            }
-        }
-        URL scanUrl = this.getClass().getResource("/" + this.basePackages.iterator().next().replace(".", "/"));
-
-        // init result
-        Set<String> handleClassesName = new HashSet<>();
-        if (this.handlePackages.size()<1) {
-            return handleClassesName;
-        }
-        URL resourceUrl = this.getClass().getResource("/" + this.handlePackages.iterator().next().replace(".", "/"));
-        if (resourceUrl==null) {
-            return handleClassesName;
-        }
-        String resourcePath = resourceUrl.getPath();
-        // if is jar package
-        if (resourcePath.contains(".jar!")) {
-            try (JarFile jarFile = new JarFile(resourcePath.substring(5, resourcePath.lastIndexOf(".jar!") + 4))) {
-                Enumeration<JarEntry> entries = jarFile.entries();
-                while (entries.hasMoreElements()) {
-                    JarEntry jar = entries.nextElement();
-                    String name = jar.getName();
-                    for (String packageName : this.handlePackages) {
-                        if (name.contains(packageName.replace(".", "/")) && name.contains(".class")) {
-                            int beginIndex = packageName.length() + 1;
-                            int endIndex = name.lastIndexOf(".class");
-                            String className = name.substring(beginIndex, endIndex);
-                            handleClassesName.add(packageName + "." + className);
+            try {
+                URL scanUrl = this.getClass().getResource("/" + basePackage.replace(".", "/"));
+                System.out.println(scanUrl);
+                java.nio.file.Path path = Paths.get(scanUrl.toURI());
+                Files.walkFileTree(path, new SimpleFileVisitor<java.nio.file.Path>() {
+                    // 访问文件时触发
+                    @Override
+                    public FileVisitResult visitFile(java.nio.file.Path file, BasicFileAttributes attrs) throws IOException {
+                        if (file.endsWith(".class")) {
+                            file.toString();
                         }
+                        handleClasses.add(file.toString());
+                        System.out.println("正在访问" + file + "文件");
+                        return FileVisitResult.CONTINUE;
                     }
-                }
+
+                    // 访问目录时触发
+                    @Override
+                    public FileVisitResult preVisitDirectory(java.nio.file.Path dir, BasicFileAttributes attrs) throws IOException {
+                        System.out.println("正在访问：" + dir + " 目录");
+                        return FileVisitResult.CONTINUE;
+                    }
+                });
             }
-            catch (IOException e) {
-                e.printStackTrace();
-            }
+            catch(Exception ignored) {}
         }
-        // if is dir
-        else {
-            for (String packageName : this.handlePackages) {
-                String path = "/" + packageName.replace(".", "/");
-                resourcePath = this.getClass().getResource(path).getPath();
-                File dir = new File(resourcePath);
-                File[] files = dir.listFiles();
-                if (files == null) {
-                    continue;
-                }
-                for (File file : files) {
-                    String name = file.getName();
-                    int endIndex = name.lastIndexOf(".class");
-                    String className = name.substring(0, endIndex);
-                    handleClassesName.add(packageName + "." + className);
-                }
-            }
-        }
-        return handleClassesName;
+        return handleClasses;
+
+//        Set<String> handleClasses = new HashSet<>();
+//        Set<File> dirList = new HashSet<>();
+//        for(String basePackage : basePackages) {
+//            URL scanUrl = this.getClass().getResource("/" + basePackage.replace(".", "/"));
+//            File uriFile = getUriFile(scanUrl.toURI());
+//            if (uriFile.isDirectory()) {
+//                dirList.add(uriFile);
+//            }
+//            int ii=1;
+//            while(true) {
+//                File ff = dirList.iterator().next();
+//                File[] fff = ff.listFiles();
+//                if (fff==null) {
+//                    continue;
+//                }
+//                for (File file : fff) {
+//                    if (file.isDirectory()) {
+//                        dirList.add(file);
+//                        ii++;
+//                    }
+//                    else if (file.getName().endsWith(".class")) {
+//                        handleClasses.add(file.getName());
+//                    }
+//                }
+//                if (ii>=dirList.size()) {
+//                    break;
+//                }
+//            }
+//        }
+//        return handleClasses;
+
+//        URL scanUrl = this.getClass().getResource("/" + this.basePackages.iterator().next().replace(".", "/"));
+//
+//        // init result
+//        Set<String> handleClassesName = new HashSet<>();
+//        if (this.handlePackages.size()<1) {
+//            return handleClassesName;
+//        }
+//        URL resourceUrl = this.getClass().getResource("/" + this.handlePackages.iterator().next().replace(".", "/"));
+//        if (resourceUrl==null) {
+//            return handleClassesName;
+//        }
+//        String resourcePath = resourceUrl.getPath();
+//        // if is jar package
+//        if (resourcePath.contains(".jar!")) {
+//            try (JarFile jarFile = new JarFile(resourcePath.substring(5, resourcePath.lastIndexOf(".jar!") + 4))) {
+//                Enumeration<JarEntry> entries = jarFile.entries();
+//                while (entries.hasMoreElements()) {
+//                    JarEntry jar = entries.nextElement();
+//                    String name = jar.getName();
+//                    for (String packageName : this.handlePackages) {
+//                        if (name.contains(packageName.replace(".", "/")) && name.contains(".class")) {
+//                            int beginIndex = packageName.length() + 1;
+//                            int endIndex = name.lastIndexOf(".class");
+//                            String className = name.substring(beginIndex, endIndex);
+//                            handleClassesName.add(packageName + "." + className);
+//                        }
+//                    }
+//                }
+//            }
+//            catch (IOException e) {
+//                e.printStackTrace();
+//            }
+//        }
+//        // if is dir
+//        else {
+//            for (String packageName : this.handlePackages) {
+//                String path = "/" + packageName.replace(".", "/");
+//                resourcePath = this.getClass().getResource(path).getPath();
+//                File dir = new File(resourcePath);
+//                File[] files = dir.listFiles();
+//                if (files == null) {
+//                    continue;
+//                }
+//                for (File file : files) {
+//                    String name = file.getName();
+//                    int endIndex = name.lastIndexOf(".class");
+//                    String className = name.substring(0, endIndex);
+//                    handleClassesName.add(packageName + "." + className);
+//                }
+//            }
+//        }
+//        return handleClassesName;
     }
 }
