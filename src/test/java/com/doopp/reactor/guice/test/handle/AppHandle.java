@@ -1,5 +1,6 @@
 package com.doopp.reactor.guice.test.handle;
 
+import com.doopp.reactor.guice.annotation.Controller;
 import com.doopp.reactor.guice.annotation.FileParam;
 import com.doopp.reactor.guice.test.entity.User;
 import com.doopp.reactor.guice.test.proto.hello.Hello;
@@ -19,6 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Controller
 @Path("/kreactor")
 public class AppHandle {
 
