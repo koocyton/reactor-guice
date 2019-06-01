@@ -1,38 +1,29 @@
 package com.doopp.reactor.guice.publisher;
 
-import com.doopp.reactor.guice.StatusMessageException;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.EmptyByteBuf;
-import io.netty.buffer.Unpooled;
+import com.google.common.io.Files;
 import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpResponseStatus;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.http.server.HttpServerResponse;
 
-import javax.ws.rs.core.MediaType;
 import java.io.*;
 import java.net.URI;
-import java.net.URL;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
 public class StaticFilePublisher {
 
-    private final Map<String, String> jarPublicDirectories;
-
-    public StaticFilePublisher(Map<String, String> jarPublicDirectories) {
-        this.jarPublicDirectories = jarPublicDirectories;
-    }
-
-    public Mono<Object> sendFile(HttpServerRequest req, HttpServerResponse resp) {
+    public Mono<Void> sendFile(HttpServerRequest req, HttpServerResponse resp) {
         try {
-            URI uri = getClass().getResource("/public").toURI();
-            final java.nio.file.Path resource;
+            URI uri = req.uri().endsWith("/")
+                ? getClass().getResource("/public" + req.uri() + "index.html").toURI()
+                : getClass().getResource("/public" + req.uri()).toURI();
+
+            final Path resource;
             if (uri.toString().startsWith("jar:")) {
                 Map<String, String> env = new HashMap<>();
                 String[] array = uri.toString().split("!");
@@ -42,82 +33,85 @@ public class StaticFilePublisher {
             } else {
                 resource = Paths.get(uri);
             }
-            File resourceFile = new File(resource.toUri());
+            File resourceFile = resource.toFile();
             if (resourceFile.isDirectory()) {
-                return Mono.just(resp.sendRedirect("/"));
+                return resp.sendRedirect(req.uri() + "/");
             }
-            return Mono.just(resp.sendFile(resource));
+            resp.header(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(resourceFile.length()));
+            resp.header(HttpHeaderNames.CONTENT_TYPE, contentType(uri.toString())+"; charset=UTF-8");
+            return resp.sendFile(resource).then();
         }
         catch (Exception e) {
-            return Mono.just(resp.sendNotFound());
+            return resp.sendNotFound();
         }
     }
 
-    public Mono<Object> sendFile2(HttpServerRequest req, HttpServerResponse resp) {
+//    public Mono<Object> sendFile2(HttpServerRequest req, HttpServerResponse resp) {
+//
+//        return Mono.create(sink -> {
+//            String requestUri = req.uri().replaceAll("/+", "/").split("\\?")[0].split("\\&")[0];
+//            String requirePath = requestUri.endsWith("/") ? "/public" + requestUri + "index.html" : "/public" + requestUri;
+//
+//            URL requestResource = this.getClass().getResource(requirePath);
+//            if (requestResource==null) {
+//                sink.error(new StatusMessageException(HttpResponseStatus.NOT_FOUND));
+//                return;
+//            }
+//
+//            // if is jar file
+//            if (jarPublicDirectories.size()>=1) {
+//                // is director
+//                if (jarPublicDirectories.get(requirePath+"/")!=null) {
+//                    resp.status(HttpResponseStatus.MOVED_PERMANENTLY);
+//                    resp.header(HttpHeaderNames.CONTENT_TYPE, MediaType.TEXT_HTML);
+//                    resp.header(HttpHeaderNames.LOCATION, requestUri + "/");
+//                    sink.success(new EmptyByteBuf(ByteBufAllocator.DEFAULT));
+//                    return;
+//                }
+//            }
+//            // if is file system
+//            else {
+//                File resourceFile = new File(requestResource.getPath());
+//                // is director
+//                if (resourceFile.isDirectory()) {
+//                    resp.status(HttpResponseStatus.MOVED_PERMANENTLY);
+//                    resp.header(HttpHeaderNames.CONTENT_TYPE, MediaType.TEXT_HTML);
+//                    resp.header(HttpHeaderNames.LOCATION, requestUri + "/");
+//                    sink.success(new EmptyByteBuf(ByteBufAllocator.DEFAULT));
+//                    return;
+//                }
+//            }
+//
+//            // get input stream
+//            InputStream fileIs = this.getClass().getResourceAsStream(requirePath);
+//            byte[] bs = new byte[1024];
+//            int len;
+//            try (ByteArrayOutputStream bout = new ByteArrayOutputStream()) {
+//                while ((len = fileIs.read(bs)) != -1) {
+//                    bout.write(bs, 0, len);
+//                }
+//                ByteBuf buf = Unpooled.wrappedBuffer(bout.toByteArray()).retain();
+//                resp.header(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(buf.readableBytes()));
+//                resp.header(HttpHeaderNames.CONTENT_TYPE, contentType(requirePath.substring(requirePath.lastIndexOf(".") + 1))+"; charset=UTF-8");
+//                sink.success(buf);
+//                buf.release();
+//            }
+//            catch (IOException e) {
+//                sink.error(new StatusMessageException(HttpResponseStatus.INTERNAL_SERVER_ERROR, e.getMessage()));
+//            }
+//
+//            // close file input stream
+//            try {
+//                fileIs.close();
+//            }
+//            catch (IOException e) {
+//                System.out.println("Static file input stream close failed !");
+//            }
+//        });
+//    }
 
-        return Mono.create(sink -> {
-            String requestUri = req.uri().replaceAll("/+", "/").split("\\?")[0].split("\\&")[0];
-            String requirePath = requestUri.endsWith("/") ? "/public" + requestUri + "index.html" : "/public" + requestUri;
-
-            URL requestResource = this.getClass().getResource(requirePath);
-            if (requestResource==null) {
-                sink.error(new StatusMessageException(HttpResponseStatus.NOT_FOUND));
-                return;
-            }
-
-            // if is jar file
-            if (jarPublicDirectories.size()>=1) {
-                // is director
-                if (jarPublicDirectories.get(requirePath+"/")!=null) {
-                    resp.status(HttpResponseStatus.MOVED_PERMANENTLY);
-                    resp.header(HttpHeaderNames.CONTENT_TYPE, MediaType.TEXT_HTML);
-                    resp.header(HttpHeaderNames.LOCATION, requestUri + "/");
-                    sink.success(new EmptyByteBuf(ByteBufAllocator.DEFAULT));
-                    return;
-                }
-            }
-            // if is file system
-            else {
-                File resourceFile = new File(requestResource.getPath());
-                // is director
-                if (resourceFile.isDirectory()) {
-                    resp.status(HttpResponseStatus.MOVED_PERMANENTLY);
-                    resp.header(HttpHeaderNames.CONTENT_TYPE, MediaType.TEXT_HTML);
-                    resp.header(HttpHeaderNames.LOCATION, requestUri + "/");
-                    sink.success(new EmptyByteBuf(ByteBufAllocator.DEFAULT));
-                    return;
-                }
-            }
-
-            // get input stream
-            InputStream fileIs = this.getClass().getResourceAsStream(requirePath);
-            byte[] bs = new byte[1024];
-            int len;
-            try (ByteArrayOutputStream bout = new ByteArrayOutputStream()) {
-                while ((len = fileIs.read(bs)) != -1) {
-                    bout.write(bs, 0, len);
-                }
-                ByteBuf buf = Unpooled.wrappedBuffer(bout.toByteArray()).retain();
-                resp.header(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(buf.readableBytes()));
-                resp.header(HttpHeaderNames.CONTENT_TYPE, contentType(requirePath.substring(requirePath.lastIndexOf(".") + 1))+"; charset=UTF-8");
-                sink.success(buf);
-                buf.release();
-            }
-            catch (IOException e) {
-                sink.error(new StatusMessageException(HttpResponseStatus.INTERNAL_SERVER_ERROR, e.getMessage()));
-            }
-
-            // close file input stream
-            try {
-                fileIs.close();
-            }
-            catch (IOException e) {
-                System.out.println("Static file input stream close failed !");
-            }
-        });
-    }
-
-    private String contentType(String fileExt) {
+    public static String contentType(String fileUri) {
+        String fileExt = fileUri.substring(fileUri.lastIndexOf(46) + 1);
         String mime = fileExt2Mimes.get(fileExt);
         return mime != null ? mime : "text/plain";
     }

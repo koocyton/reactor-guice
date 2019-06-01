@@ -25,7 +25,6 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
@@ -63,9 +62,7 @@ public class ReactorGuiceServer {
 
     private final Map<String, Filter> filters = new HashMap<>();
 
-    private final Set<String> handlePackages = new HashSet<>();
-
-    private final Map<String, String> jarPublicDirectories = new HashMap<>();
+    private final Set<String> basePackages = new HashSet<>();
 
     public static ReactorGuiceServer create() {
         return new ReactorGuiceServer();
@@ -77,8 +74,8 @@ public class ReactorGuiceServer {
         return this;
     }
 
-    public ReactorGuiceServer handlePackages(String... basePackages) {
-        Collections.addAll(this.handlePackages, basePackages);
+    public ReactorGuiceServer basePackages(String... basePackages) {
+        Collections.addAll(this.basePackages, basePackages);
         return this;
     }
 
@@ -225,27 +222,11 @@ public class ReactorGuiceServer {
             }
             // static server
             else {
-//                StaticFilePublisher staticFilePublisher = new StaticFilePublisher(this.jarPublicDirectories);
+                StaticFilePublisher staticFilePublisher = new StaticFilePublisher();
                 System.out.println("   GET /** →  /public/* <static files>");
-//                routes.get("/**", (req, resp) -> httpPublisher(req, resp, null, o ->
-//                        staticFilePublisher.sendFile(req, resp)
-//                ));
-                try {
-                    URI uri = getClass().getResource("/public").toURI();
-                    java.nio.file.Path resource = Paths.get(uri);
-                    if (uri.toString().startsWith("jar:")) {
-                        Map<String, String> env = new HashMap<>();
-                        String[] array = uri.toString().split("!");
-                        FileSystem fs = FileSystems.newFileSystem(URI.create(array[0]), env);
-                        resource = fs.getPath(array[1]);
-                    }
-                    final java.nio.file.Path finalResource = resource;
-                    routes.directory("/", finalResource, resp->{
-                        return resp.header(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE)
-                            .header(HttpHeaderNames.SERVER, "RGS/" + this.version);
-                    });
-                }
-                catch(IOException | URISyntaxException ignore) {}
+                routes.route(req->true, (req, resp) -> httpPublisher(req, resp, null, o ->
+                    Mono.just(staticFilePublisher.sendFile(req, resp))
+                ));
             }
         };
     }
@@ -335,7 +316,48 @@ public class ReactorGuiceServer {
         return Mono.just(requestAttribute);
     }
 
-    private Set<String> getHandleClassesName() {
+    private File getUriFile(URI uri) {
+        final java.nio.file.Path resource;
+        if (uri.toString().startsWith("jar:")) {
+            Map<String, String> env = new HashMap<>();
+            String[] array = uri.toString().split("!");
+            FileSystem fs = FileSystems.newFileSystem(URI.create(array[0]), env);
+            resource = fs.getPath(array[1]);
+            fs.close();
+        } else {
+            resource = Paths.get(uri);
+        }
+        return resource.toFile();
+    }
+
+    private Set<String> setHandleClasses() {
+        Set<String> handleClasses = new HashSet<>();
+        Set<File> dirList = new HashSet<>();
+        for(String basePackage : basePackages) {
+            URL scanUrl = this.getClass().getResource("/" + basePackage.replace(".", "/"));
+            File uriFile = getUriFile(scanUrl.toURI());
+            if (uriFile.isDirectory()) {
+                dirList.add(uriFile);
+            }
+            int ii=0;
+            while(true) {
+                File ff = dirList.iterator().next();
+                File[] fff = ff.listFiles();
+                if (fff.length<1) {
+                    break;
+                }
+                for (int mm=0; mm<fff.length; mm++) {
+                    fff[mm].isDirectory();
+                    dirList.add(fff[mm]);
+
+                }
+                if (ii>=dirList.size()) {
+                    break;
+                }
+            }
+        }
+        URL scanUrl = this.getClass().getResource("/" + this.basePackages.iterator().next().replace(".", "/"));
+
         // init result
         Set<String> handleClassesName = new HashSet<>();
         if (this.handlePackages.size()<1) {
@@ -353,9 +375,6 @@ public class ReactorGuiceServer {
                 while (entries.hasMoreElements()) {
                     JarEntry jar = entries.nextElement();
                     String name = jar.getName();
-                    if (name.startsWith("public/") && name.endsWith("/")) {
-                        this.jarPublicDirectories.put("/"+name, "/"+name);
-                    }
                     for (String packageName : this.handlePackages) {
                         if (name.contains(packageName.replace(".", "/")) && name.contains(".class")) {
                             int beginIndex = packageName.length() + 1;

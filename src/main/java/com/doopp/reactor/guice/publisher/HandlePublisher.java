@@ -1,7 +1,6 @@
 package com.doopp.reactor.guice.publisher;
 
-import com.doopp.reactor.guice.RequestAttribute;
-import com.doopp.reactor.guice.annotation.RequestAttributeParam;
+import com.doopp.reactor.guice.annotation.RequestAttribute;
 import com.doopp.reactor.guice.annotation.FileParam;
 import com.doopp.reactor.guice.json.HttpMessageConverter;
 import com.doopp.reactor.guice.view.ModelMap;
@@ -52,7 +51,7 @@ public class HandlePublisher {
         String contentType = methodProductsValue(method);
         // result
         return this.invokeMethod(
-            req, resp, method, handleObject, (RequestAttribute) requestAttribute, modelMap
+            req, resp, method, handleObject, (com.doopp.reactor.guice.RequestAttribute) requestAttribute, modelMap
         )
             .map(result -> {
                 resp.header(HttpHeaderNames.CONTENT_TYPE, contentType);
@@ -87,7 +86,7 @@ public class HandlePublisher {
             });
     }
 
-    private Mono<?> invokeMethod(HttpServerRequest request, HttpServerResponse response, Method method, Object handleObject, RequestAttribute requestAttribute, ModelMap modelMap) {
+    private Mono<?> invokeMethod(HttpServerRequest request, HttpServerResponse response, Method method, Object handleObject, com.doopp.reactor.guice.RequestAttribute requestAttribute, ModelMap modelMap) {
 
         // value of url quest
         Map<String, List<String>> questParams = new HashMap<>();
@@ -154,7 +153,7 @@ public class HandlePublisher {
     private Object[] methodParams(Method method,
                                   HttpServerRequest request,
                                   HttpServerResponse response,
-                                  RequestAttribute requestAttribute,
+                                  com.doopp.reactor.guice.RequestAttribute requestAttribute,
                                   ModelMap modelMap,
                                   ByteBuf content,
                                   Map<String, List<String>> questParams,
@@ -182,7 +181,7 @@ public class HandlePublisher {
         for (Parameter parameter : method.getParameters()) {
             Class<?> parameterClazz = parameter.getType();
             // RequestAttribute
-            if (parameterClazz == RequestAttribute.class) {
+            if (parameterClazz == com.doopp.reactor.guice.RequestAttribute.class) {
                 objectList.add(requestAttribute);
             }
             // request
@@ -198,8 +197,8 @@ public class HandlePublisher {
                 objectList.add(modelMap);
             }
             // RequestAttribute item
-            else if (parameter.getAnnotation(RequestAttributeParam.class) != null) {
-                String annotationKey = parameter.getAnnotation(RequestAttributeParam.class).value();
+            else if (parameter.getAnnotation(RequestAttribute.class) != null) {
+                String annotationKey = parameter.getAnnotation(RequestAttribute.class).value();
                 objectList.add(requestAttribute.getAttribute(annotationKey, parameterClazz));
             }
             // CookieParam : Set<Cookie>
@@ -295,7 +294,7 @@ public class HandlePublisher {
 
     private Object formBeanParam(HttpServerRequest request,
                                  HttpServerResponse response,
-                                 RequestAttribute requestAttribute,
+                                 com.doopp.reactor.guice.RequestAttribute requestAttribute,
                                  ModelMap modelMap,
                                  ByteBuf content,
                                  Map<String, List<String>> questParams,
