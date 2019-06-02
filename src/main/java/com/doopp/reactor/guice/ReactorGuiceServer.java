@@ -340,18 +340,25 @@ public class ReactorGuiceServer {
                     // 访问文件时触发
                     @Override
                     public FileVisitResult visitFile(java.nio.file.Path file, BasicFileAttributes attrs) throws IOException {
-                        if (file.endsWith(".class")) {
-                            file.toString();
+                        String filePath = file.toString();
+                        if (filePath.endsWith(".class")) {
+                            int startIndexOf = filePath.indexOf(basePackage.replace(".", "/"));
+                            int endIndexOf = filePath.indexOf(".class");
+                            System.out.println(filePath);
+                            System.out.println(basePackage.replace(".", "/"));
+                            System.out.println(startIndexOf + " - " + endIndexOf);
+                            // String classPath = filePath.substring(startIndexOf, endIndexOf);
+//                            System.out.println(classPath);
+//                            handleClasses.add(file.toString());
                         }
-                        handleClasses.add(file.toString());
-                        System.out.println("正在访问" + file + "文件");
+                        // System.out.println("正在访问" + file + "文件");
                         return FileVisitResult.CONTINUE;
                     }
 
                     // 访问目录时触发
                     @Override
                     public FileVisitResult preVisitDirectory(java.nio.file.Path dir, BasicFileAttributes attrs) throws IOException {
-                        System.out.println("正在访问：" + dir + " 目录");
+                        // System.out.println("正在访问：" + dir + " 目录");
                         return FileVisitResult.CONTINUE;
                     }
                 });
