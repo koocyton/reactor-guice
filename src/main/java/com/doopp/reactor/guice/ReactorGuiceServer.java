@@ -335,8 +335,9 @@ public class ReactorGuiceServer {
         for(String basePackage : basePackages) {
             try {
                 URL scanUrl = this.getClass().getResource("/" + basePackage.replace(".", "/"));
-                java.nio.file.Path path = Paths.get(scanUrl.toURI());
-                Files.walkFileTree(path, new SimpleFileVisitor<java.nio.file.Path>() {
+                // java.nio.file.Path path = Paths.get(scanUrl.toURI());
+                FileSystem fs = FileSystems.newFileSystem(Paths.get(scanUrl.getPath()), null);
+                Files.walkFileTree(fs.getPath("/"), new SimpleFileVisitor<java.nio.file.Path>() {
                     @Override
                     public FileVisitResult visitFile(java.nio.file.Path file, BasicFileAttributes attrs) throws IOException {
                         String filePath = file.toUri().toString();

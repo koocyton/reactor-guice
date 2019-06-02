@@ -56,7 +56,7 @@ mvn clean
 
 mvn package
 
-mvn install:install-file -Dfile=target/reactor-guice-0.10.jar -DgroupId=com.doopp.local -DartifactId=reactor-guice -Dversion=0.10 -Dpackaging=jar
+mvn install:install-file -Dfile=target/reactor-guice-0.11-SNAPSHOT.jar -DgroupId=com.doopp.local -DartifactId=reactor-guice -Dversion=0.11 -Dpackaging=jar
 
 <dependency>
     <groupId>com.doopp.local</groupId>

@@ -1,5 +1,6 @@
 package com.doopp.reactor.guice.test.service.impl;
 
+import com.doopp.reactor.guice.annotation.Service;
 import com.doopp.reactor.guice.test.entity.Coordinate;
 import com.doopp.reactor.guice.test.entity.Point;
 import com.doopp.reactor.guice.test.entity.PointsResponse;
@@ -15,6 +16,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Service("mapApiService")
 public class MapApiServiceGaodeImpl implements MapApiService {
 
     private static final String gaodeSecretKey = "...";
