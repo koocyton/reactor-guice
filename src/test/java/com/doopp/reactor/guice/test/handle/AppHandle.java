@@ -48,10 +48,8 @@ public class AppHandle {
     @Path("/test/html/{id}")
     @Produces({MediaType.TEXT_HTML})
     public Mono<String> testHtml(@PathParam("id") Long id, ModelMap modelMap) {
-        return Mono.just("test").map(s->{
-            modelMap.addAttribute("id", id);
-            return s;
-        });
+        modelMap.addAttribute("id", id);
+        return Mono.just("test");
     }
 
     @GET

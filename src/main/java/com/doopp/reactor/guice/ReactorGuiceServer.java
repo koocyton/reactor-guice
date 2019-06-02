@@ -1,5 +1,6 @@
 package com.doopp.reactor.guice;
 
+import com.doopp.reactor.guice.annotation.Controller;
 import com.doopp.reactor.guice.json.HttpMessageConverter;
 import com.doopp.reactor.guice.publisher.*;
 import com.doopp.reactor.guice.view.TemplateDelegate;
@@ -144,29 +145,30 @@ public class ReactorGuiceServer {
                     continue;
                 }
                 Object handleObject;
-                // 如果初始化对象有问题
+                Class<?> handleClass;
                 try {
-                    handleObject = injector.getInstance(Class.forName(handleClassName));
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    continue;
+                    handleClass = Class.forName(handleClassName);
                 }
-                // 如果是静态方法，或接口
-                int classModifiers = handleObject.getClass().getModifiers();
-                if (Modifier.isAbstract(classModifiers) || Modifier.isInterface(classModifiers)) {
+                catch(ClassNotFoundException e) {
                     continue;
                 }
                 // 拿到根路径
-                Path pathAnnotation = handleObject.getClass().getAnnotation(Path.class);
+                Path pathAnnotation = handleClass.getAnnotation(Path.class);
                 String rootPath = (pathAnnotation == null) ? "" : pathAnnotation.value();
                 // if websocket
-                if (AbstractWebSocketServerHandle.class.isAssignableFrom(handleObject.getClass()) && pathAnnotation != null) {
+                if (AbstractWebSocketServerHandle.class.isAssignableFrom(handleClass) && pathAnnotation != null) {
+                    handleObject = injector.getInstance(handleClass);
                     System.out.println("    WS " + rootPath + " → " + handleClassName);
                     routes.get(rootPath, (req, resp) -> httpPublisher(req, resp, null, o ->
                             websocketPublisher.sendMessage(req, resp, (WebSocketServerHandle) handleObject, o)
                     ));
                     continue;
                 }
+                // if is not controller
+                if (!handleClass.isAnnotationPresent(Controller.class)) {
+                    continue;
+                }
+                handleObject = injector.getInstance(handleClass);
                 // methods for handle
                 Method[] handleMethods = handleObject.getClass().getMethods();
                 // loop methods
@@ -329,36 +331,22 @@ public class ReactorGuiceServer {
 //    }
 
     private Set<String> setHandleClasses() {
-
         Set<String> handleClasses = new HashSet<>();
         for(String basePackage : basePackages) {
             try {
                 URL scanUrl = this.getClass().getResource("/" + basePackage.replace(".", "/"));
-                System.out.println(scanUrl);
                 java.nio.file.Path path = Paths.get(scanUrl.toURI());
                 Files.walkFileTree(path, new SimpleFileVisitor<java.nio.file.Path>() {
-                    // 访问文件时触发
                     @Override
                     public FileVisitResult visitFile(java.nio.file.Path file, BasicFileAttributes attrs) throws IOException {
-                        String filePath = file.toString();
+                        String filePath = file.toUri().toString();
                         if (filePath.endsWith(".class")) {
                             int startIndexOf = filePath.indexOf(basePackage.replace(".", "/"));
                             int endIndexOf = filePath.indexOf(".class");
-                            System.out.println(filePath);
-                            System.out.println(basePackage.replace(".", "/"));
-                            System.out.println(startIndexOf + " - " + endIndexOf);
-                            // String classPath = filePath.substring(startIndexOf, endIndexOf);
-//                            System.out.println(classPath);
-//                            handleClasses.add(file.toString());
+                            String classPath = filePath.substring(startIndexOf, endIndexOf);
+                            String className = classPath.replace("/", ".");
+                            handleClasses.add(className);
                         }
-                        // System.out.println("正在访问" + file + "文件");
-                        return FileVisitResult.CONTINUE;
-                    }
-
-                    // 访问目录时触发
-                    @Override
-                    public FileVisitResult preVisitDirectory(java.nio.file.Path dir, BasicFileAttributes attrs) throws IOException {
-                        // System.out.println("正在访问：" + dir + " 目录");
                         return FileVisitResult.CONTINUE;
                     }
                 });
