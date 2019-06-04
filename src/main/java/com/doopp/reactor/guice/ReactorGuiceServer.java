@@ -338,15 +338,16 @@ public class ReactorGuiceServer {
         for(String basePackage : basePackages) {
             try {
                 URL resource = this.getClass().getResource("/" + basePackage.replace(".", "/"));
-                java.nio.file.Path resourcePath = Paths.get(resource.getPath());
+                java.nio.file.Path resourcePath = Paths.get(resource.toURI());
                 FileSystem fs = null;
+                System.out.println(resourcePath);
                 if (resource.getProtocol().equals("jar")) {
                     String[] jarPathInfo = resource.getPath().split("!");
-                    // if (jarPathInfo[0].startsWith("file:")) {
-                    //    jarPathInfo[0] = jarPathInfo[0].substring(5);
-                    // }
+                    if (jarPathInfo[0].startsWith("file:")) {
+                        jarPathInfo[0] = jarPathInfo[0].substring(5);
+                    }
                     // TODO: 2019-06-04 需要测试下面的方法可以替代上面的功能
-                    jarPathInfo[0] = jarPathInfo[0].substring(jarPathInfo[0].indexOf("/"));
+                    // jarPathInfo[0] = jarPathInfo[0].substring(jarPathInfo[0].indexOf("/"));
                     java.nio.file.Path jarPath = Paths.get(jarPathInfo[0]);
                     fs = FileSystems.newFileSystem(jarPath, null);
                     resourcePath = fs.getPath(jarPathInfo[1]);
@@ -356,8 +357,11 @@ public class ReactorGuiceServer {
                     public FileVisitResult visitFile(java.nio.file.Path file, BasicFileAttributes attrs) throws IOException {
                         String filePath = file.toAbsolutePath().toString();
                         if (filePath.endsWith(".class")) {
+                            System.out.println(filePath);
                             int startIndexOf = filePath.indexOf(basePackage.replace(".", "/"));
                             int endIndexOf = filePath.indexOf(".class");
+                            System.out.println(startIndexOf);
+                            System.out.println(endIndexOf);
                             String classPath = filePath.substring(startIndexOf, endIndexOf);
                             String className = classPath.replace("/", ".");
                             handleClasses.add(className);
@@ -369,7 +373,9 @@ public class ReactorGuiceServer {
                     fs.close();
                 }
             }
-            catch(Exception ignored) {}
+            catch(Exception e) {
+                e.printStackTrace();
+            }
         }
         return handleClasses;
 

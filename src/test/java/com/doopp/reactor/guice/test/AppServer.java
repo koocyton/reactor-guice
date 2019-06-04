@@ -32,8 +32,8 @@ public class AppServer {
     public void testServer() throws IOException {
 
         Properties properties = new Properties();
-        // properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
-        properties.load(new FileInputStream("/Developer/Project/reactor-guice/application.properties"));
+        properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
+        // properties.load(new FileInputStream("/Developer/Project/reactor-guice/application.properties"));
 
         Injector injector = Guice.createInjector(
             binder -> Names.bindProperties(binder, properties),
