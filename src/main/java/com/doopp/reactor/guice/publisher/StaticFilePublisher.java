@@ -25,10 +25,12 @@ public class StaticFilePublisher {
             if (resource.getProtocol().equals("jar")) {
                 String[] jarPathInfo = resource.getPath().split("!");
                 if (jarPathInfo[0].startsWith("file:")) {
-                    jarPathInfo[0] = jarPathInfo[0].substring(5);
+                    jarPathInfo[0] = java.io.File.separator.equals("\\")
+                        ? jarPathInfo[0].substring(6)
+                        : jarPathInfo[0].substring(5);
                 }
                 java.nio.file.Path jarPath = Paths.get(jarPathInfo[0]);
-                FileSystem fs = FileSystems.newFileSystem(jarPath, null);
+                FileSystem fs = FileSystems.newFileSystem(jarPath.toAbsolutePath(), null);
                 resourcePath = fs.getPath(jarPathInfo[1]);
 
                 File resourceFile = resourcePath.toFile();

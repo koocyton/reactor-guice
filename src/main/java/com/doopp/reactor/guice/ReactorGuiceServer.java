@@ -338,17 +338,27 @@ public class ReactorGuiceServer {
         for(String basePackage : basePackages) {
             try {
                 URL resource = this.getClass().getResource("/" + basePackage.replace(".", "/"));
-                java.nio.file.Path resourcePath = Paths.get(resource.toURI());
+                System.out.println(resource.toString());
+                System.out.println(resource.toURI());
+                System.out.println(resource.getFile());
+                System.out.println(resource.getPath());
+                java.nio.file.Path resourcePath;
                 FileSystem fs = null;
                 if (resource.getProtocol().equals("jar")) {
                     String[] jarPathInfo = resource.getPath().split("!");
                     if (jarPathInfo[0].startsWith("file:")) {
-                        jarPathInfo[0] = jarPathInfo[0].substring(5);
+                        jarPathInfo[0] = java.io.File.separator.equals("\\")
+                            ? jarPathInfo[0].substring(6)
+                            : jarPathInfo[0].substring(5);
                     }
                     java.nio.file.Path jarPath = Paths.get(jarPathInfo[0]);
-                    fs = FileSystems.newFileSystem(jarPath, null);
+                    fs = FileSystems.newFileSystem(jarPath.toAbsolutePath(), null);
                     resourcePath = fs.getPath(jarPathInfo[1]);
                 }
+                else {
+                    resourcePath = Paths.get(resource.toURI());
+                }
+                System.out.println(resourcePath);
                 Files.walkFileTree(resourcePath, new SimpleFileVisitor<java.nio.file.Path>() {
                     @Override
                     public FileVisitResult visitFile(java.nio.file.Path file, BasicFileAttributes attrs) throws IOException {
