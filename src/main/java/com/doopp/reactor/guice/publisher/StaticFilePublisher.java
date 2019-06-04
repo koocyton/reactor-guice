@@ -7,6 +7,7 @@ import reactor.netty.http.server.HttpServerResponse;
 
 import java.io.*;
 import java.net.URI;
+import java.net.URL;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
@@ -18,27 +19,27 @@ public class StaticFilePublisher {
 
     public Mono<Void> sendFile(HttpServerRequest req, HttpServerResponse resp) {
         try {
-            URI uri = req.uri().endsWith("/")
-                ? getClass().getResource("/public" + req.uri() + "index.html").toURI()
-                : getClass().getResource("/public" + req.uri()).toURI();
 
-            final Path resource;
-            if (uri.toString().startsWith("jar:")) {
-                Map<String, String> env = new HashMap<>();
-                String[] array = uri.toString().split("!");
-                FileSystem fs = FileSystems.newFileSystem(URI.create(array[0]), env);
-                resource = fs.getPath(array[1]);
+            URL resource = req.uri().endsWith("/")
+                    ? getClass().getResource("/public" + req.uri() + "index.html")
+                    : getClass().getResource("/public" + req.uri());
+
+            java.nio.file.Path resourcePath = Paths.get(resource.getPath());
+            if (resource.getProtocol().equals("jar")) {
+                String[] jarPathInfo = resource.getPath().split("!");
+                java.nio.file.Path jarPath = Paths.get(jarPathInfo[0]);
+                FileSystem fs = FileSystems.newFileSystem(jarPath, null);
+                resourcePath = fs.getPath(jarPathInfo[1]);
                 fs.close();
-            } else {
-                resource = Paths.get(uri);
             }
-            File resourceFile = resource.toFile();
+
+            File resourceFile = resourcePath.toFile();
             if (resourceFile.isDirectory()) {
                 return resp.sendRedirect(req.uri() + "/");
             }
             resp.header(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(resourceFile.length()));
-            resp.header(HttpHeaderNames.CONTENT_TYPE, contentType(uri.toString())+"; charset=UTF-8");
-            return resp.sendFile(resource).then();
+            resp.header(HttpHeaderNames.CONTENT_TYPE, contentType(resource.toString())+"; charset=UTF-8");
+            return resp.sendFile(resourcePath).then();
         }
         catch (Exception e) {
             return resp.sendNotFound();
