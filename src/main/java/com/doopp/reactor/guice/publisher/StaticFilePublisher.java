@@ -6,31 +6,48 @@ import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.http.server.HttpServerResponse;
 
 import java.io.*;
-import java.net.URI;
 import java.net.URL;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
-import java.util.Map;
 
 public class StaticFilePublisher {
 
     public Mono<Void> sendFile(HttpServerRequest req, HttpServerResponse resp) {
         try {
-
             URL resource = req.uri().endsWith("/")
                     ? getClass().getResource("/public" + req.uri() + "index.html")
                     : getClass().getResource("/public" + req.uri());
 
             java.nio.file.Path resourcePath = Paths.get(resource.getPath());
+
             if (resource.getProtocol().equals("jar")) {
                 String[] jarPathInfo = resource.getPath().split("!");
+                if (jarPathInfo[0].startsWith("file:")) {
+                    jarPathInfo[0] = jarPathInfo[0].substring(5);
+                }
                 java.nio.file.Path jarPath = Paths.get(jarPathInfo[0]);
                 FileSystem fs = FileSystems.newFileSystem(jarPath, null);
                 resourcePath = fs.getPath(jarPathInfo[1]);
-                fs.close();
+
+                File resourceFile = resourcePath.toFile();
+                if (resourceFile.isDirectory()) {
+                    return resp.sendRedirect(req.uri() + "/").doOnSuccessOrError((v, t)->{
+                        try {
+                            fs.close();
+                        }
+                        catch(IOException ignored) {}
+                    });
+                }
+                resp.header(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(resourceFile.length()));
+                resp.header(HttpHeaderNames.CONTENT_TYPE, contentType(resource.toString())+"; charset=UTF-8");
+                return resp.sendFile(resourcePath).then().doOnSuccessOrError((v, t)->{
+                    try {
+                        fs.close();
+                    }
+                    catch(IOException ignored) {}
+                });
             }
 
             File resourceFile = resourcePath.toFile();

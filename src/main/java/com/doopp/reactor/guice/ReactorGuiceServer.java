@@ -336,17 +336,20 @@ public class ReactorGuiceServer {
             try {
                 URL resource = this.getClass().getResource("/" + basePackage.replace(".", "/"));
                 java.nio.file.Path resourcePath = Paths.get(resource.getPath());
+                FileSystem fs = null;
                 if (resource.getProtocol().equals("jar")) {
                     String[] jarPathInfo = resource.getPath().split("!");
+                    if (jarPathInfo[0].startsWith("file:")) {
+                        jarPathInfo[0] = jarPathInfo[0].substring(5);
+                    }
                     java.nio.file.Path jarPath = Paths.get(jarPathInfo[0]);
-                    FileSystem fs = FileSystems.newFileSystem(jarPath, null);
+                    fs = FileSystems.newFileSystem(jarPath, null);
                     resourcePath = fs.getPath(jarPathInfo[1]);
-                    fs.close();
                 }
                 Files.walkFileTree(resourcePath, new SimpleFileVisitor<java.nio.file.Path>() {
                     @Override
                     public FileVisitResult visitFile(java.nio.file.Path file, BasicFileAttributes attrs) throws IOException {
-                        String filePath = file.toUri().toString();
+                        String filePath = file.toAbsolutePath().toString();
                         if (filePath.endsWith(".class")) {
                             int startIndexOf = filePath.indexOf(basePackage.replace(".", "/"));
                             int endIndexOf = filePath.indexOf(".class");
@@ -357,6 +360,9 @@ public class ReactorGuiceServer {
                         return FileVisitResult.CONTINUE;
                     }
                 });
+                if (fs!=null) {
+                    fs.close();
+                }
             }
             catch(Exception ignored) {}
         }

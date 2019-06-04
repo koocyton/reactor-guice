@@ -18,9 +18,11 @@ public class FunctionTest {
         String p1 = "/Developer/Project/reactor-guice/target/classes";
         Path pp1 = Paths.get(p1 + uri);
 
-        Path p2 = Paths.get("/Users/henry/Desktop/reactor-publisher-1.0.jar");
+        // jarPath : /Developer/Project/reactor-publisher/build/libs/reactor-publisher-1.0.jar
+        // resourcePath : /com/doopp/gauss/app/handle
+        Path p2 = Paths.get("/Developer/Project/reactor-publisher/build/libs/reactor-publisher-1.0.jar");
         FileSystem fs2 = FileSystems.newFileSystem(p2, null);
-        Path pp2 = fs2.getPath(uri);
+        Path pp2 = fs2.getPath("/com/doopp/gauss/app/handle");
 
         URL resource = getClass().getResource(uri);
         Path pp3 = Paths.get(resource.getPath());
@@ -28,7 +30,7 @@ public class FunctionTest {
         // FileSystem fs3 = FileSystems.newFileSystem(p3, null);
         // Path pp3 = fs3.getPath("/");
 
-        Files.walkFileTree(pp3, new SimpleFileVisitor<Path>() {
+        Files.walkFileTree(pp2, new SimpleFileVisitor<Path>() {
             @Override
             public FileVisitResult visitFile(java.nio.file.Path file, BasicFileAttributes attrs) throws IOException {
                 String filePath = file.toUri().toString();
