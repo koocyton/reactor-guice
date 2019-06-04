@@ -342,9 +342,11 @@ public class ReactorGuiceServer {
                 FileSystem fs = null;
                 if (resource.getProtocol().equals("jar")) {
                     String[] jarPathInfo = resource.getPath().split("!");
-                    if (jarPathInfo[0].startsWith("file:")) {
-                        jarPathInfo[0] = jarPathInfo[0].substring(5);
-                    }
+                    // if (jarPathInfo[0].startsWith("file:")) {
+                    //    jarPathInfo[0] = jarPathInfo[0].substring(5);
+                    // }
+                    // TODO: 2019-06-04 需要测试下面的方法可以替代上面的功能
+                    jarPathInfo[0] = jarPathInfo[0].substring(jarPathInfo[0].indexOf("/"));
                     java.nio.file.Path jarPath = Paths.get(jarPathInfo[0]);
                     fs = FileSystems.newFileSystem(jarPath, null);
                     resourcePath = fs.getPath(jarPathInfo[1]);
