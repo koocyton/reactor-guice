@@ -20,7 +20,7 @@ public class StaticFilePublisher {
                     ? getClass().getResource("/public" + req.uri() + "index.html")
                     : getClass().getResource("/public" + req.uri());
 
-            java.nio.file.Path resourcePath = Paths.get(resource.getPath());
+            java.nio.file.Path resourcePath = Paths.get(resource.toURI());
 
             if (resource.getProtocol().equals("jar")) {
                 String[] jarPathInfo = resource.getPath().split("!");
@@ -33,21 +33,11 @@ public class StaticFilePublisher {
 
                 File resourceFile = resourcePath.toFile();
                 if (resourceFile.isDirectory()) {
-                    return resp.sendRedirect(req.uri() + "/").doOnSuccessOrError((v, t)->{
-                        try {
-                            fs.close();
-                        }
-                        catch(IOException ignored) {}
-                    });
+                    return resp.sendRedirect(req.uri() + "/");
                 }
                 resp.header(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(resourceFile.length()));
                 resp.header(HttpHeaderNames.CONTENT_TYPE, contentType(resource.toString())+"; charset=UTF-8");
-                return resp.sendFile(resourcePath).then().doOnSuccessOrError((v, t)->{
-                    try {
-                        fs.close();
-                    }
-                    catch(IOException ignored) {}
-                });
+                return resp.sendFile(resourcePath).then();
             }
 
             File resourceFile = resourcePath.toFile();
