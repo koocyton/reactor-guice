@@ -148,6 +148,9 @@ public class ReactorGuiceServer {
                 Class<?> handleClass;
                 try {
                     handleClass = Class.forName(handleClassName);
+                    if (handleClass.isInterface()) {
+                        continue;
+                    }
                 }
                 catch(ClassNotFoundException e) {
                     continue;
