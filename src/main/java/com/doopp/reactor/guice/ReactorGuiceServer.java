@@ -58,7 +58,7 @@ public class ReactorGuiceServer {
     // api gateway model default disabled
     private ApiGatewayDispatcher apiGatewayDispatcher;
 
-    private final Map<String, Filter> filters = new HashMap<>();
+    private final Map<String, Class> filters = new HashMap<>();
 
     private final Set<String> basePackages = new HashSet<>();
 
@@ -94,9 +94,7 @@ public class ReactorGuiceServer {
     }
 
     public ReactorGuiceServer addFilter(String path, Class<? extends Filter> clazz) {
-        if (this.injector!=null) {
-            this.filters.put(path, this.injector.getInstance(clazz));
-        }
+        this.filters.put(path, clazz);
         return this;
     }
 
@@ -187,7 +185,7 @@ public class ReactorGuiceServer {
                 }
                 handleObject = injector.getInstance(handleClass);
                 // methods for handle
-                Method[] handleMethods = handleObject.getClass().getMethods();
+                Method[] handleMethods = handleClass.getMethods();
                 // loop methods
                 for (Method method : handleMethods) {
                     // if have request path
@@ -327,7 +325,7 @@ public class ReactorGuiceServer {
         for (String key : this.filters.keySet()) {
             // choice filter
             if (req.uri().length() >= key.length() && req.uri().startsWith(key)) {
-                return this.filters.get(key).doFilter(req, resp, requestAttribute);
+                return ((Filter) this.injector.getInstance(this.filters.get(key))).doFilter(req, resp, requestAttribute);
             }
         }
         return Mono.just(requestAttribute);
