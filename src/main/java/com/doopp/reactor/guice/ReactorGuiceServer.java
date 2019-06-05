@@ -40,7 +40,7 @@ public class ReactorGuiceServer {
 
     private int port = 8081;
 
-    private String version = "0.0.9";
+    private String version = "0.11";
 
     // handle
     private HandlePublisher handlePublisher = new HandlePublisher();
@@ -338,10 +338,10 @@ public class ReactorGuiceServer {
         for(String basePackage : basePackages) {
             try {
                 URL resource = this.getClass().getResource("/" + basePackage.replace(".", "/"));
-                System.out.println(resource.toString());
-                System.out.println(resource.toURI());
-                System.out.println(resource.getFile());
-                System.out.println(resource.getPath());
+                // System.out.println("resource.toString() : " + resource.toString());
+                // System.out.println("resource.toURI() : " + resource.toURI());
+                // System.out.println("resource.getFile() : " + resource.getFile());
+                // System.out.println("resource.getPath() : " + resource.getPath());
                 java.nio.file.Path resourcePath;
                 FileSystem fs = null;
                 if (resource.getProtocol().equals("jar")) {
@@ -351,23 +351,31 @@ public class ReactorGuiceServer {
                             ? jarPathInfo[0].substring(6)
                             : jarPathInfo[0].substring(5);
                     }
+                    // System.out.println("resource.jarPathInfo[0] : " + jarPathInfo[0]);
+                    // System.out.println("resource.jarPathInfo[1] : " + jarPathInfo[1]);
                     java.nio.file.Path jarPath = Paths.get(jarPathInfo[0]);
-                    fs = FileSystems.newFileSystem(jarPath.toAbsolutePath(), null);
+                    fs = FileSystems.newFileSystem(jarPath, null);
                     resourcePath = fs.getPath(jarPathInfo[1]);
                 }
                 else {
                     resourcePath = Paths.get(resource.toURI());
                 }
-                System.out.println(resourcePath);
+                // System.out.println(resourcePath);
                 Files.walkFileTree(resourcePath, new SimpleFileVisitor<java.nio.file.Path>() {
                     @Override
                     public FileVisitResult visitFile(java.nio.file.Path file, BasicFileAttributes attrs) throws IOException {
-                        String filePath = file.toAbsolutePath().toString();
-                        if (filePath.endsWith(".class")) {
-                            int startIndexOf = filePath.indexOf(basePackage.replace(".", java.io.File.separator));
-                            int endIndexOf = filePath.indexOf(".class");
-                            String classPath = filePath.substring(startIndexOf, endIndexOf);
-                            String className = classPath.replace(java.io.File.separator, ".");
+                        String uriPath = file.toUri().toString();
+                        // System.out.println("file.toUri() : " + file.toUri());
+                        // System.out.println("file.toRealPath() : " + file.toRealPath());
+                        // System.out.println("file.toAbsolutePath() : " + file.toAbsolutePath());
+                        if (uriPath.endsWith(".class")) {
+                            int startIndexOf = uriPath.indexOf(basePackage.replace(".", "/"));
+                            int endIndexOf = uriPath.indexOf(".class");
+                            if (startIndexOf<0) {
+                                return FileVisitResult.CONTINUE;
+                            }
+                            String classPath = uriPath.substring(startIndexOf, endIndexOf);
+                            String className = classPath.replace("/", ".");
                             handleClasses.add(className);
                         }
                         return FileVisitResult.CONTINUE;

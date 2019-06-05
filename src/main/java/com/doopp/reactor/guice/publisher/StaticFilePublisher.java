@@ -9,6 +9,7 @@ import java.io.*;
 import java.net.URL;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.HashMap;
 
@@ -19,9 +20,8 @@ public class StaticFilePublisher {
             URL resource = req.uri().endsWith("/")
                     ? getClass().getResource("/public" + req.uri() + "index.html")
                     : getClass().getResource("/public" + req.uri());
-
-            java.nio.file.Path resourcePath = Paths.get(resource.toURI());
-
+            java.nio.file.Path resourcePath;
+            FileSystem fs;
             if (resource.getProtocol().equals("jar")) {
                 String[] jarPathInfo = resource.getPath().split("!");
                 if (jarPathInfo[0].startsWith("file:")) {
@@ -30,23 +30,18 @@ public class StaticFilePublisher {
                         : jarPathInfo[0].substring(5);
                 }
                 java.nio.file.Path jarPath = Paths.get(jarPathInfo[0]);
-                FileSystem fs = FileSystems.newFileSystem(jarPath.toAbsolutePath(), null);
+                System.out.println(jarPath);
+                fs = FileSystems.newFileSystem(jarPath, null);
                 resourcePath = fs.getPath(jarPathInfo[1]);
-
-                File resourceFile = resourcePath.toFile();
-                if (resourceFile.isDirectory()) {
-                    return resp.sendRedirect(req.uri() + "/");
-                }
-                resp.header(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(resourceFile.length()));
-                resp.header(HttpHeaderNames.CONTENT_TYPE, contentType(resource.toString())+"; charset=UTF-8");
-                return resp.sendFile(resourcePath).then();
+            }
+            else {
+                resourcePath = Paths.get(resource.toURI());
             }
 
-            File resourceFile = resourcePath.toFile();
-            if (resourceFile.isDirectory()) {
+            if (Files.isDirectory(resourcePath)) {
                 return resp.sendRedirect(req.uri() + "/");
             }
-            resp.header(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(resourceFile.length()));
+            resp.header(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(Files.size(resourcePath)));
             resp.header(HttpHeaderNames.CONTENT_TYPE, contentType(resource.toString())+"; charset=UTF-8");
             return resp.sendFile(resourcePath).then();
         }
