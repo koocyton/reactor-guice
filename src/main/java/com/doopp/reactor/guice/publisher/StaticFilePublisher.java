@@ -1,11 +1,11 @@
 package com.doopp.reactor.guice.publisher;
 
+import com.google.common.base.Objects;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.http.server.HttpServerResponse;
 
-import java.io.*;
 import java.net.URL;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
@@ -15,13 +15,14 @@ import java.util.HashMap;
 
 public class StaticFilePublisher {
 
+    private FileSystem fs = null;
+
     public Mono<Void> sendFile(HttpServerRequest req, HttpServerResponse resp) {
         try {
             URL resource = req.uri().endsWith("/")
                     ? getClass().getResource("/public" + req.uri() + "index.html")
                     : getClass().getResource("/public" + req.uri());
             java.nio.file.Path resourcePath;
-            FileSystem fs;
             if (resource.getProtocol().equals("jar")) {
                 String[] jarPathInfo = resource.getPath().split("!");
                 if (jarPathInfo[0].startsWith("file:")) {
@@ -30,8 +31,9 @@ public class StaticFilePublisher {
                         : jarPathInfo[0].substring(5);
                 }
                 java.nio.file.Path jarPath = Paths.get(jarPathInfo[0]);
-                System.out.println(jarPath);
-                fs = FileSystems.newFileSystem(jarPath, null);
+                if (fs==null || !fs.isOpen()) {
+                    fs = FileSystems.newFileSystem(jarPath, null);
+                }
                 resourcePath = fs.getPath(jarPathInfo[1]);
             }
             else {

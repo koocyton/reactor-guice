@@ -29,6 +29,9 @@ Reactor-guice integrates the framework of Google Guice and Reactor-netty
       upload file recive support byte[] UploadFile File annotation
       upload file use File type can auto save specified directory
       add more test example 
+0.11  autoscan controller Class than add custom mothd to route
+      (Remove handlePackage , add basePackage to create server Method)
+      autoscan service class ,then inject Guice model
 
 support udp server
 maybe use Jersey to execute dispatch
