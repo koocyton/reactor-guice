@@ -44,41 +44,27 @@ maybe use Jersey to execute dispatch
 <dependency>
     <groupId>com.doopp</groupId>
     <artifactId>reactor-guice</artifactId>
-    <version>0.10</version>
+    <version>0.11</version>
 </dependency>
 ```
 
 #### gradle
 ```
-compile 'com.doopp:reactor-guice:0.10'
-```
-
-#### use Local Maven 
-```
-mvn clean
-
-mvn package
-
-mvn install:install-file -Dfile=target/reactor-guice-0.11-SNAPSHOT.jar -DgroupId=com.doopp.local -DartifactId=reactor-guice -Dversion=0.11 -Dpackaging=jar
-
-<dependency>
-    <groupId>com.doopp.local</groupId>
-    <artifactId>reactor-guice</artifactId>
-    <version>0.10</version>
-</dependency>
+compile 'com.doopp:reactor-guice:0.11'
 ```
 
 ### 2. create you application
 
 ```java
-Injector injector = Guice.createInjector(...);
+// Injector injector = Guice.createInjector(...);
 
 ReactorGuiceServer.create()
     .bind(host, port)
-    .injector(injector)
+    // .injector(injector)
+    .createInjector(Module... mudules)
     .setHttpMessageConverter(new JacksonHttpMessageConverter())
     .setTemplateDelegate(new FreemarkTemplateDelegate())
-    .handlePackages("com.doopp.reactor.guice.test.handle")
+    .handlePackages("com.doopp.reactor.guice.test")
     .addFilter("/", TestFilter.class)
     .crossOrigin(true)
     .printError(true)
@@ -90,30 +76,33 @@ ReactorGuiceServer.create()
 #### Handle Example
 
 ```java
-/** https://kreactor.doopp.com/test/json **/
-@GET
-@Path("/json")
-@Produces({MediaType.APPLICATION_JSON})
-public Mono<Map<String, String>> json() {
-    return Mono
-        .just(new HashMap<String, String>())
-        .map(m -> {
-            m.put("hi", "five girl");
-            return m;
-        });
-}
-
-/** https://kreactor.doopp.com/test/jpeg **/
-@GET
-@Path("/jpeg")
-@Produces({"image/jpeg"})
-public Mono<ByteBuf> jpeg() {
-    return HttpClient.create()
-        .get()
-        .uri("https://static.cnbetacdn.com/article/2019/0402/6398390c491f650.jpg")
-        .responseContent()
-        .aggregate()
-        .map(ByteBuf::retain);
+@Controller
+class ApplicationController {
+    /** https://kreactor.doopp.com/test/json **/
+    @GET
+    @Path("/json")
+    @Produces({MediaType.APPLICATION_JSON})
+    public Mono<Map<String, String>> json() {
+        return Mono
+            .just(new HashMap<String, String>())
+            .map(m -> {
+                m.put("hi", "five girl");
+                return m;
+            });
+    }
+    
+    /** https://kreactor.doopp.com/test/jpeg **/
+    @GET
+    @Path("/jpeg")
+    @Produces({"image/jpeg"})
+    public Mono<ByteBuf> jpeg() {
+        return HttpClient.create()
+            .get()
+            .uri("https://static.cnbetacdn.com/article/2019/0402/6398390c491f650.jpg")
+            .responseContent()
+            .aggregate()
+            .map(ByteBuf::retain);
+    }
 }
 ```
 
@@ -156,10 +145,11 @@ ReactorGuiceServer.create()
 ```java
 ReactorGuiceServer.create()
         .bind(host, port)
-        .injector(injector)
+        // .injector(injector)
+        .createInjector(Module... mudules)
         .setHttpMessageConverter(new JacksonHttpMessageConverter())
         .setApiGatewayDispatcher(new MyApiGatewayDispatcher())
-        .handlePackages("com.doopp.reactor.guice.test.handle")
+        .handlePackages("com.doopp.reactor.guice.test")
         .addFilter("/", TestFilter.class)
         .launch();
 ```
