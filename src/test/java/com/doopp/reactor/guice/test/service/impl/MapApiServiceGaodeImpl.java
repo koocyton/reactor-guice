@@ -16,7 +16,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@Service("mapApiService")
+@Service
 public class MapApiServiceGaodeImpl implements MapApiService {
 
     private static final String gaodeSecretKey = "...";

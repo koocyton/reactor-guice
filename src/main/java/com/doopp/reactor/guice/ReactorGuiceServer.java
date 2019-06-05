@@ -6,7 +6,9 @@ import com.doopp.reactor.guice.publisher.*;
 import com.doopp.reactor.guice.view.TemplateDelegate;
 import com.doopp.reactor.guice.websocket.AbstractWebSocketServerHandle;
 import com.doopp.reactor.guice.websocket.WebSocketServerHandle;
+import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.Module;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
@@ -22,11 +24,8 @@ import reactor.netty.http.server.HttpServerRoutes;
 import javax.ws.rs.*;
 import javax.ws.rs.Path;
 import javax.ws.rs.core.MediaType;
-import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.net.URI;
 import java.net.URL;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
@@ -63,6 +62,10 @@ public class ReactorGuiceServer {
 
     private final Set<String> basePackages = new HashSet<>();
 
+    private final Set<Module> modules = new HashSet<>();
+
+    static final Set<String> classNames = new HashSet<>();
+
     public static ReactorGuiceServer create() {
         return new ReactorGuiceServer();
     }
@@ -75,10 +78,16 @@ public class ReactorGuiceServer {
 
     public ReactorGuiceServer basePackages(String... basePackages) {
         Collections.addAll(this.basePackages, basePackages);
+        this.setClassNames();
         return this;
     }
 
-    public ReactorGuiceServer injector(Injector injector) {
+    public ReactorGuiceServer createInjector(Module... modules) {
+        Collections.addAll(this.modules, modules);
+        return this;
+    }
+
+    public ReactorGuiceServer importInjector(Injector injector) {
         assert injector!=null : "A Injector instance is required";
         this.injector = injector;
         return this;
@@ -121,6 +130,12 @@ public class ReactorGuiceServer {
 
     public void launch() {
 
+        // 如果 injector 没有设定，就使用自动扫描的注入
+        if (this.injector==null) {
+            modules.add(new AutoImportModule());
+            this.injector = Guice.createInjector(modules);
+        }
+        // 启动服务
         DisposableServer disposableServer = HttpServer.create()
             .tcpConfiguration(tcpServer ->
                 tcpServer.option(ChannelOption.SO_KEEPALIVE, true)
@@ -137,17 +152,16 @@ public class ReactorGuiceServer {
     }
 
     private Consumer<HttpServerRoutes> routesBuilder() {
-        Set<String> handleClassesName = this.setHandleClasses();
         // routes
         return routes -> {
-            for (String handleClassName : handleClassesName) {
+            for (String className : classNames) {
                 if (injector == null) {
                     continue;
                 }
                 Object handleObject;
                 Class<?> handleClass;
                 try {
-                    handleClass = Class.forName(handleClassName);
+                    handleClass = Class.forName(className);
                     if (handleClass.isInterface()) {
                         continue;
                     }
@@ -161,7 +175,7 @@ public class ReactorGuiceServer {
                 // if websocket
                 if (AbstractWebSocketServerHandle.class.isAssignableFrom(handleClass) && pathAnnotation != null) {
                     handleObject = injector.getInstance(handleClass);
-                    System.out.println("    WS " + rootPath + " → " + handleClassName);
+                    System.out.println("    WS " + rootPath + " → " + className);
                     routes.get(rootPath, (req, resp) -> httpPublisher(req, resp, null, o ->
                             websocketPublisher.sendMessage(req, resp, (WebSocketServerHandle) handleObject, o)
                     ));
@@ -181,28 +195,28 @@ public class ReactorGuiceServer {
                         String requestPath = rootPath + method.getAnnotation(Path.class).value();
                         // GET
                         if (method.isAnnotationPresent(GET.class)) {
-                            System.out.println("   GET " + requestPath + " → " + handleClassName + ":" + method.getName());
+                            System.out.println("   GET " + requestPath + " → " + className + ":" + method.getName());
                             routes.get(requestPath, (req, resp) -> httpPublisher(req, resp, method, o ->
                                 handlePublisher.sendResult(req, resp, method, handleObject, o)
                             ));
                         }
                         // POST
                         else if (method.isAnnotationPresent(POST.class)) {
-                            System.out.println("  POST " + requestPath + " → " + handleClassName + ":" + method.getName());
+                            System.out.println("  POST " + requestPath + " → " + className + ":" + method.getName());
                             routes.post(requestPath, (req, resp) -> httpPublisher(req, resp, method, o ->
                                 handlePublisher.sendResult(req, resp, method, handleObject, o)
                             ));
                         }
                         // DELETE
                         else if (method.isAnnotationPresent(DELETE.class)) {
-                            System.out.println("DELETE " + requestPath + " → " + handleClassName + ":" + method.getName());
+                            System.out.println("DELETE " + requestPath + " → " + className + ":" + method.getName());
                             routes.delete(requestPath, (req, resp) -> httpPublisher(req, resp, method, o ->
                                 handlePublisher.sendResult(req, resp, method, handleObject, o)
                             ));
                         }
                         // UPDATE
                         else if (method.isAnnotationPresent(PUT.class)) {
-                            System.out.println("   PUT " + requestPath + " → " + handleClassName + ":" + method.getName());
+                            System.out.println("   PUT " + requestPath + " → " + className + ":" + method.getName());
                             routes.put(requestPath, (req, resp) -> httpPublisher(req, resp, method, o ->
                                 handlePublisher.sendResult(req, resp, method, handleObject, o)
                             ));
@@ -333,8 +347,8 @@ public class ReactorGuiceServer {
 //        return resource.toFile();
 //    }
 
-    private Set<String> setHandleClasses() {
-        Set<String> handleClasses = new HashSet<>();
+    private void setClassNames() {
+        // Set<String> handleClasses = new HashSet<>();
         for(String basePackage : basePackages) {
             try {
                 URL resource = this.getClass().getResource("/" + basePackage.replace(".", "/"));
@@ -376,7 +390,7 @@ public class ReactorGuiceServer {
                             }
                             String classPath = uriPath.substring(startIndexOf, endIndexOf);
                             String className = classPath.replace("/", ".");
-                            handleClasses.add(className);
+                            classNames.add(className);
                         }
                         return FileVisitResult.CONTINUE;
                     }
@@ -389,8 +403,6 @@ public class ReactorGuiceServer {
                 e.printStackTrace();
             }
         }
-        return handleClasses;
-
 //        Set<String> handleClasses = new HashSet<>();
 //        Set<File> dirList = new HashSet<>();
 //        for(String basePackage : basePackages) {

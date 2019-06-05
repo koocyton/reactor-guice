@@ -1,13 +1,13 @@
 package com.doopp.reactor.guice.test.service.impl;
 
+import com.doopp.reactor.guice.annotation.Service;
 import com.doopp.reactor.guice.test.service.TestService;
 import com.google.inject.Inject;
 import io.netty.util.CharsetUtil;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
 
-import java.nio.charset.Charset;
-
+@Service
 public class TestServiceImpl implements TestService {
 
     @Inject

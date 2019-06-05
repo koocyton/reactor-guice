@@ -17,8 +17,8 @@ class Module extends AbstractModule {
 
     @Override
     public void configure() {
-        bind(TestService.class).to(TestServiceImpl.class).in(Scopes.SINGLETON);
-        bind(MapApiService.class).to(MapApiServiceGaodeImpl.class).in(Scopes.SINGLETON);
+        // bind(TestService.class).to(TestServiceImpl.class).in(Scopes.SINGLETON);
+        // bind(MapApiService.class).to(MapApiServiceGaodeImpl.class).in(Scopes.SINGLETON);
     }
 
     @Singleton

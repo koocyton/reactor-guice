@@ -35,10 +35,7 @@ public class AppServer {
         properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
         // properties.load(new FileInputStream("/Developer/Project/reactor-guice/application.properties"));
 
-        Injector injector = Guice.createInjector(
-            binder -> Names.bindProperties(binder, properties),
-            new Module()
-        );
+
 
         String host = properties.getProperty("server.host", "127.0.0.1");
         int port = Integer.valueOf(properties.getProperty("server.port", "8081"));
@@ -54,7 +51,10 @@ public class AppServer {
 
         ReactorGuiceServer.create()
             .bind(host, port)
-            .injector(injector)
+            .createInjector(
+                binder -> Names.bindProperties(binder, properties),
+                new Module()
+            )
             // .setHttpMessageConverter(new MyJacksonHttpMessageConverter())
             .setHttpMessageConverter(new MyGsonHttpMessageConverter())
             .setTemplateDelegate(new FreemarkTemplateDelegate())
