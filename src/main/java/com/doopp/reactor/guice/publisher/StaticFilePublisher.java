@@ -1,56 +1,78 @@
 package com.doopp.reactor.guice.publisher;
 
-import com.google.common.base.Objects;
+import com.doopp.reactor.guice.ReactorGuiceServer;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.http.server.HttpServerResponse;
 
 import java.net.URL;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.nio.file.*;
 import java.util.HashMap;
 
 public class StaticFilePublisher {
 
-    private FileSystem fs = null;
-
     public Mono<Void> sendFile(HttpServerRequest req, HttpServerResponse resp) {
-        try {
-            URL resource = req.uri().endsWith("/")
-                    ? getClass().getResource("/public" + req.uri() + "index.html")
-                    : getClass().getResource("/public" + req.uri());
-            java.nio.file.Path resourcePath;
-            if (resource.getProtocol().equals("jar")) {
-                String[] jarPathInfo = resource.getPath().split("!");
-                if (jarPathInfo[0].startsWith("file:")) {
-                    jarPathInfo[0] = java.io.File.separator.equals("\\")
-                        ? jarPathInfo[0].substring(6)
-                        : jarPathInfo[0].substring(5);
-                }
-                java.nio.file.Path jarPath = Paths.get(jarPathInfo[0]);
-                if (fs==null || !fs.isOpen()) {
-                    fs = FileSystems.newFileSystem(jarPath, null);
-                }
-                resourcePath = fs.getPath(jarPathInfo[1]);
-            }
-            else {
-                resourcePath = Paths.get(resource.toURI());
-            }
 
-            if (Files.isDirectory(resourcePath)) {
-                return resp.sendRedirect(req.uri() + "/");
-            }
-            resp.header(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(Files.size(resourcePath)));
-            resp.header(HttpHeaderNames.CONTENT_TYPE, contentType(resource.toString())+"; charset=UTF-8");
-            return resp.sendFile(resourcePath).then();
-        }
-        catch (Exception e) {
-            return resp.sendNotFound();
-        }
+        URL resource = req.uri().endsWith("/")
+                ? getClass().getResource("/public" + req.uri() + "index.html")
+                : getClass().getResource("/public" + req.uri());
+
+        return ReactorGuiceServer.classResourcePath(resource)
+                .flatMap(path->this.setHeader(path, resp))
+                .flatMap(path -> {
+                    if (Files.isDirectory(path)) {
+                        return resp.sendRedirect(req.uri() + "/");
+                    }
+                    return resp.sendFile(path).then();
+                });
     }
+
+    private Mono<Path> setHeader(Path path, HttpServerResponse resp) {
+        return Mono.fromCallable(()->{
+            if (!Files.isDirectory(path)) {
+                resp.header(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(Files.size(path)));
+                resp.header(HttpHeaderNames.CONTENT_TYPE, contentType(path.toString())+"; charset=UTF-8");
+            }
+            return path;
+        }).subscribeOn(Schedulers.elastic());
+    }
+
+//    public Mono<Void> sendFile3(HttpServerRequest req, HttpServerResponse resp) {
+//        try {
+//            URL resource = req.uri().endsWith("/")
+//                    ? getClass().getResource("/public" + req.uri() + "index.html")
+//                    : getClass().getResource("/public" + req.uri());
+//            java.nio.file.Path resourcePath;
+//            if (resource.getProtocol().equals("jar")) {
+//                String[] jarPathInfo = resource.getPath().split("!");
+//                if (jarPathInfo[0].startsWith("file:")) {
+//                    jarPathInfo[0] = java.io.File.separator.equals("\\")
+//                            ? jarPathInfo[0].substring(6)
+//                            : jarPathInfo[0].substring(5);
+//                }
+//                java.nio.file.Path jarPath = Paths.get(jarPathInfo[0]);
+//                if (fs==null || !fs.isOpen()) {
+//                    fs = FileSystems.newFileSystem(jarPath, null);
+//                }
+//                resourcePath = fs.getPath(jarPathInfo[1]);
+//            }
+//            else {
+//                resourcePath = Paths.get(resource.toURI());
+//            }
+//
+//            if (Files.isDirectory(resourcePath)) {
+//                return resp.sendRedirect(req.uri() + "/");
+//            }
+//            resp.header(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(Files.size(resourcePath)));
+//            resp.header(HttpHeaderNames.CONTENT_TYPE, contentType(resource.toString())+"; charset=UTF-8");
+//            return resp.sendFile(resourcePath).then();
+//        }
+//        catch (Exception e) {
+//            return resp.sendNotFound();
+//        }
+//    }
 
 //    public Mono<Object> sendFile2(HttpServerRequest req, HttpServerResponse resp) {
 //
