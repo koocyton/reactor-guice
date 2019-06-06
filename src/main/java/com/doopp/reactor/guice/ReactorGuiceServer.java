@@ -15,6 +15,7 @@ import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import reactor.netty.DisposableServer;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.http.server.HttpServerRequest;
@@ -354,24 +355,8 @@ public class ReactorGuiceServer {
                 // System.out.println("resource.toURI() : " + resource.toURI());
                 // System.out.println("resource.getFile() : " + resource.getFile());
                 // System.out.println("resource.getPath() : " + resource.getPath());
-                java.nio.file.Path resourcePath;
-                FileSystem fs = null;
-                if (resource.getProtocol().equals("jar")) {
-                    String[] jarPathInfo = resource.getPath().split("!");
-                    if (jarPathInfo[0].startsWith("file:")) {
-                        jarPathInfo[0] = java.io.File.separator.equals("\\")
-                            ? jarPathInfo[0].substring(6)
-                            : jarPathInfo[0].substring(5);
-                    }
-                    // System.out.println("resource.jarPathInfo[0] : " + jarPathInfo[0]);
-                    // System.out.println("resource.jarPathInfo[1] : " + jarPathInfo[1]);
-                    java.nio.file.Path jarPath = Paths.get(jarPathInfo[0]);
-                    fs = FileSystems.newFileSystem(jarPath, null);
-                    resourcePath = fs.getPath(jarPathInfo[1]);
-                }
-                else {
-                    resourcePath = Paths.get(resource.toURI());
-                }
+                java.nio.file.Path resourcePath = classResourcePath(resource).block();
+
                 // System.out.println(resourcePath);
                 Files.walkFileTree(resourcePath, new SimpleFileVisitor<java.nio.file.Path>() {
                     @Override
@@ -393,8 +378,8 @@ public class ReactorGuiceServer {
                         return FileVisitResult.CONTINUE;
                     }
                 });
-                if (fs!=null) {
-                    fs.close();
+                if (classFs!=null) {
+                    classFs.close();
                 }
             }
             catch(Exception e) {
@@ -484,5 +469,27 @@ public class ReactorGuiceServer {
 //            }
 //        }
 //        return handleClassesName;
+    }
+
+    private static FileSystem classFs = null;
+
+    public static Mono<java.nio.file.Path> classResourcePath(URL resource) {
+        return Mono.fromCallable(()->{
+            if (resource.getProtocol().equals("jar")) {
+                String[] jarPathInfo = resource.getPath().split("!");
+                if (jarPathInfo[0].startsWith("file:")) {
+                    jarPathInfo[0] = java.io.File.separator.equals("\\")
+                            ? jarPathInfo[0].substring(6)
+                            : jarPathInfo[0].substring(5);
+                }
+                java.nio.file.Path jarPath = Paths.get(jarPathInfo[0]);
+                if (classFs==null || !classFs.isOpen()) {
+                    classFs = FileSystems.newFileSystem(jarPath, null);
+                }
+                return classFs.getPath(jarPathInfo[1]);
+            }
+            return Paths.get(resource.toURI());
+        })
+                .subscribeOn(Schedulers.elastic());
     }
 }
