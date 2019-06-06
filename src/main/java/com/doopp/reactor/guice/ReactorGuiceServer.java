@@ -40,7 +40,7 @@ public class ReactorGuiceServer {
 
     private int port = 8081;
 
-    private String version = "0.11";
+    final private String version = "0.12";
 
     // handle
     private HandlePublisher handlePublisher = new HandlePublisher();
