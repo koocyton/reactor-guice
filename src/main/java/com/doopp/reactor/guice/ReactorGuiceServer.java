@@ -25,7 +25,6 @@ import reactor.netty.http.server.HttpServerRoutes;
 import javax.ws.rs.*;
 import javax.ws.rs.Path;
 import javax.ws.rs.core.MediaType;
-import java.io.IOException;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.nio.file.*;
@@ -59,7 +58,7 @@ public class ReactorGuiceServer {
     // api gateway model default disabled
     private ApiGatewayDispatcher apiGatewayDispatcher;
 
-    private final Map<String, Class> filters = new HashMap<>();
+    private final Map<String, Class<? extends Filter>> filters = new HashMap<>();
 
     private final Set<String> basePackages = new HashSet<>();
 
@@ -312,8 +311,8 @@ public class ReactorGuiceServer {
                 }
             })
             .flatMap(o -> {
-                if (o instanceof Mono<?>) {
-                    return (Mono<Void>) o;
+                if (o instanceof Mono) {
+                    return ((Mono) o).then();
                 }
                 return (o instanceof String)
                                 ? resp.sendString(Mono.just((String) o)).then()
@@ -326,7 +325,7 @@ public class ReactorGuiceServer {
         for (String key : this.filters.keySet()) {
             // choice filter
             if (req.uri().length() >= key.length() && req.uri().startsWith(key)) {
-                return ((Filter) this.injector.getInstance(this.filters.get(key))).doFilter(req, resp, requestAttribute);
+                return this.injector.getInstance(this.filters.get(key)).doFilter(req, resp, requestAttribute);
             }
         }
         return Mono.just(requestAttribute);
@@ -356,11 +355,13 @@ public class ReactorGuiceServer {
                 // System.out.println("resource.getFile() : " + resource.getFile());
                 // System.out.println("resource.getPath() : " + resource.getPath());
                 java.nio.file.Path resourcePath = classResourcePath(resource).block();
-
+                if (resourcePath==null) {
+                    continue;
+                }
                 // System.out.println(resourcePath);
                 Files.walkFileTree(resourcePath, new SimpleFileVisitor<java.nio.file.Path>() {
                     @Override
-                    public FileVisitResult visitFile(java.nio.file.Path file, BasicFileAttributes attrs) throws IOException {
+                    public FileVisitResult visitFile(java.nio.file.Path file, BasicFileAttributes attrs) {
                         String uriPath = file.toUri().toString();
                         // System.out.println("file.toUri() : " + file.toUri());
                         // System.out.println("file.toRealPath() : " + file.toRealPath());

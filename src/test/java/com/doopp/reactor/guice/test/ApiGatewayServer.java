@@ -19,20 +19,21 @@ public class ApiGatewayServer {
 
         Properties properties = new Properties();
         properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
-        // properties.load(new FileInputStream("/Developer/Project/reactor-guice/application.properties"));
 
-        Injector injector = Guice.createInjector(
-            binder -> Names.bindProperties(binder, properties),
-            new Module()
-        );
+        String host = properties.getProperty("server.host", "127.0.0.1");
+        int port = Integer.valueOf(properties.getProperty("server.port", "8081"));
 
         ReactorGuiceServer.create()
-            .bind("127.0.0.1", 8080)
-            // .injector(injector)
+            .bind(host, port)
             // .setHttpMessageConverter(new JacksonHttpMessageConverter())
+            // .createInjector(
+            //    binder -> Names.bindProperties(binder, properties),
+            //    new Module()
+            // )
             .setApiGatewayDispatcher(new MyApiGatewayDispatcher())
-            // .handlePackages("com.doopp.reactor.guice.test.handle")
+            // .basePackages("com.doopp.reactor.guice.test.service")
             .addFilter("/", TestFilter.class)
+            .printError(true)
             .launch();
     }
 }

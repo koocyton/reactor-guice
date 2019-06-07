@@ -10,8 +10,8 @@ import reactor.netty.http.server.HttpServerResponse;
 
 class TestFilter implements Filter {
 
-    @Inject
-    private TestService testService;
+    // @Inject
+    // private TestService testService;
 
     @Override
     public Mono<Object> doFilter(HttpServerRequest request, HttpServerResponse response, RequestAttribute requestAttribute) {

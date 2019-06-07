@@ -10,7 +10,7 @@ public class MyApiGatewayDispatcher implements ApiGatewayDispatcher {
     @Override
     public URL getInsideUrl(String uri) {
         try {
-            return new URL("https://www.doopp.com" + uri);
+            return new URL("https://www.baidu.com" + uri);
         }
         catch(MalformedURLException e) {
             throw new RuntimeException(e);
