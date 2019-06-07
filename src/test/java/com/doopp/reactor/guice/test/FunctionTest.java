@@ -2,6 +2,7 @@ package com.doopp.reactor.guice.test;
 
 import io.netty.channel.ChannelOption;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import org.junit.Test;
 import reactor.netty.DisposableServer;
 import reactor.netty.http.server.HttpServer;
 
@@ -13,6 +14,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 
 public class FunctionTest {
 
+    @Test
     public void testStaticJarFile() {
         DisposableServer disposableServer = HttpServer.create()
             .tcpConfiguration(tcpServer ->
@@ -64,10 +66,11 @@ public class FunctionTest {
 
         System.out.printf("\n>>> KReactor Server Running http://%s:%d/ ... \n\n", "127.0.0.1", 8083);
 
-        disposableServer.onDispose().block();
+        // disposableServer.onDispose().block();
     }
 
 
+    @Test
     public void testReadJarFile() throws IOException, URISyntaxException {
 
         //String uri = "/com/doopp/reactor/guice";
