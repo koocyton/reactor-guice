@@ -1,84 +1,110 @@
 # reactor-guice
 
-Reactor-guice integrates the framework of Google Guice and Reactor-netty
+Reactor-guice 是一个基于 Google Guice 和 Reactor-netty 的 Reactor 微服务框架
+在开发中自动配置路由和依赖注入，以及用他作为你的网关服，仅在启动过程中使用反射来完善配置,
+所以他的性能是基于 Guice 和 Reactor 模式。
 
 #### Milestone
 ``` html
-0.0.3 Support annotations GET POST PUT DELETE
-0.0.3 Support annotations Products PATH
-0.0.3 Static File Support
-0.0.3 Support Websocket
-0.0.4 Custom filter by uri
-0.0.5 index.html in the default output directory
-0.0.5 Support for custom templates lib
-      with gson and Jackson convert
-0.0.5 Support for custom json lib
-      with freeemark convert
-      and modelmap for template
-0.0.5 you can upload files
-0.0.6 POST can be an array
-0.0.7 use redirect:/** to redirect
-0.0.8 support api gateway model
-      fix Repeated header information
-      add cross domain header and options request
-0.0.9 support protobuf ( can output byte[] )
-      fix redirect bug ... -_-
-      the default JSON output returns the execution
-          result directly ( remove object wrapping )
-0.10  support BeanParam for form data , json data and protobuf data
-      upload file recive support byte[] UploadFile File annotation
-      upload file use File type can auto save specified directory
-      add more test example 
-0.11  autoscan controller Class than add custom mothd to route
-      (Remove handlePackage , add basePackage to create server Method)
-      autoscan service class ,then inject Guice model
+0.0.3 注册注解 @GET @POST @PUT @DELETE @Products @PATH
+      支持 Websocket 可作为静态文件服
+      支持对 URI 做 Filter 处理
+      
+0.0.5 静态文件目录后默认输出 index.html
+      支持自选模板引擎，自带Freemark 和 Thymeleaf 处理类
+      支持自定义Json引擎，自带 Gson 和jackson 的处理类
+      添加 ModelMap, 注入到 Controlle 的方法，用户模板的变量代入
+      可以上传文件了
 
-support udp server
-maybe use Jersey to execute dispatch
+0.0.8 可以 POST 数组
+      通过返回 Mono.just("redirect:/...") 实现重定向
+      支持 API 网关模式
+      修复头信息错误的 BUG
+      可选返回跨域头信息
+
+0.10  支持输出 Protobuf
+      BeanParm 可以支持 Form ,Json 或 Protobuf ，将上传的数据自动组织成对象
+      上传的文件接受类型 byte[] , UploadFile, File
+      上传文件可以自动保存到指定的目录
+
+0.11  增加自动扫描 Controlle 类和 Service 类
+      通过扫描完成路由配置和依赖注入，不同手动做额外配置
+
+0.12.1 静态文件的读取塞入到异步中去处理
+       这个版本是一个稳定的版本
+
 ```
 
-### 1. import reactor-guice
+### 1. 引入 reactor-guice
 
 #### maven
 ```
 <dependency>
     <groupId>com.doopp</groupId>
     <artifactId>reactor-guice</artifactId>
-    <version>0.11</version>
+    <version>0.12.1</version>
 </dependency>
 ```
 
 #### gradle
 ```
-compile 'com.doopp:reactor-guice:0.11'
+compile 'com.doopp:reactor-guice:0.10'
 ```
 
-### 2. create you application
+### 2. 创建应用
 
 ```java
-// Injector injector = Guice.createInjector(...);
+public static void main(String[] args) throws IOException {
+        // 载入配置
+        Properties properties = new Properties();
+        properties.load(new FileInputStream(args[0]));
 
-ReactorGuiceServer.create()
-    .bind(host, port)
-    // .injector(injector)
-    .createInjector(Module... mudules)
-    .setHttpMessageConverter(new JacksonHttpMessageConverter())
-    .setTemplateDelegate(new FreemarkTemplateDelegate())
-    .handlePackages("com.doopp.reactor.guice.test")
-    .addFilter("/", TestFilter.class)
-    .crossOrigin(true)
-    .printError(true)
-    .launch();
+        String host = properties.getProperty("server.host");
+        int port = Integer.valueOf(properties.getProperty("server.port"));
+        // 启动服务
+        ReactorGuiceServer.create()
+                .bind(host, port)
+                .createInjector(
+                        // 方便使用 @Names 来获取配置 
+                        binder -> Names.bindProperties(binder, properties),
+                        // 数据库
+                        new MyBatisModule() {
+                            @Override
+                            protected void initialize() {
+                                install(JdbcHelper.MySQL);
+                                bindDataSourceProviderType(HikariDataSourceProvider.class);
+                                bindTransactionFactoryType(JdbcTransactionFactory.class);
+                                addMapperClasses("com.doopp.gauss.app.dao");
+                                // addInterceptorClass(PageInterceptor.class);
+                            }
+                        },
+                        // Redis    
+                        new RedisModule(),
+                        // 自定义的配置
+                        new ApplicationModule()
+                )
+                // 配置 Json 处理类
+                .setHttpMessageConverter(new MyGsonHttpMessageConverter())
+                // 设定自动扫描 Controller 和 Service 的包名，可以配置多个
+                .basePackages("com.doopp.gauss.app", ...)
+                // 目前仅支持通过 URI 来过滤，可以多次 addFilter
+                .addFilter("/", AppFilter.class)
+                // 错误信息输出
+                .printError(true)
+                .launch();
+    }
 ```
 
-### 3. creat you service
+### 3. 创建 Controller
 
-#### Handle Example
+#### Controller Example
 
 ```java
+
 @Controller
-class ApplicationController {
-    /** https://kreactor.doopp.com/test/json **/
+@Path("/api/admin")
+public class ExampleController {
+
     @GET
     @Path("/json")
     @Produces({MediaType.APPLICATION_JSON})
@@ -90,8 +116,7 @@ class ApplicationController {
                 return m;
             });
     }
-    
-    /** https://kreactor.doopp.com/test/jpeg **/
+
     @GET
     @Path("/jpeg")
     @Produces({"image/jpeg"})
@@ -130,7 +155,7 @@ public class WsTestHandle extends AbstractWebSocketServerHandle {
 
 ```
 
-#### Api Gateway Model
+#### Api Gateway 模式
 
 ```java
 ReactorGuiceServer.create()
@@ -140,13 +165,12 @@ ReactorGuiceServer.create()
         .launch();
 ```
 
-#### Mixed Api Gateway Model
+#### 混合的 Api Gateway Model
 
 ```java
 ReactorGuiceServer.create()
         .bind(host, port)
-        // .injector(injector)
-        .createInjector(Module... mudules)
+        .createInjector(module1, module2, ...)
         .setHttpMessageConverter(new JacksonHttpMessageConverter())
         .setApiGatewayDispatcher(new MyApiGatewayDispatcher())
         .handlePackages("com.doopp.reactor.guice.test")
@@ -154,7 +178,7 @@ ReactorGuiceServer.create()
         .launch();
 ```
 
-#### Receive file update and form post
+#### 表单和文件上传
 
 ```java
 
@@ -187,3 +211,19 @@ public void testFileUpload() {
     System.out.println(hhe);
 }
 ```
+
+#### Protobuf
+```java
+@GET
+@Path("/test/protobuf")
+@Produces("application/x-protobuf")
+public Mono<byte[]> testProtobuf() {
+    Hello.Builder builder = Hello.newBuilder();
+    builder.setId(123);
+    builder.setName("wuyi");
+    builder.setEmail("wuyi@doopp.com");
+    return Mono.just(builder.build().toByteArray());
+}
+```
+
+
