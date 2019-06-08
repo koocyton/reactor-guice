@@ -6,7 +6,7 @@
 
     <groupId>com.doopp</groupId>
     <artifactId>reactor-guice</artifactId>
-    <version>0.12-SNAPSHOT</version>
+    <version>0.12.1-SNAPSHOT</version>
     <description>Guice reactor-netty Components</description>
     <name>reactor-guice</name>
     <url>https://github.com/koocyton/reactor-guice</url>
@@ -102,17 +102,17 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-core</artifactId>
-            <version>2.9.8</version>
+            <version>2.9.9</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <version>2.9.8</version>
+            <version>2.9.9</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-annotations</artifactId>
-            <version>2.9.8</version>
+            <version>2.9.9</version>
         </dependency>
 
         <!-- freemarker template -->
