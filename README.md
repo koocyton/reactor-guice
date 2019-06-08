@@ -1,7 +1,9 @@
 # reactor-guice
 
 Reactor-guice 是一个基于 Google Guice 和 Reactor-netty 的 Reactor 微服务框架
+
 在开发中自动配置路由和依赖注入，以及用他作为你的网关服，仅在启动过程中使用反射来完善配置,
+
 所以他的性能是基于 Guice 和 Reactor 模式。
 
 #### Milestone
