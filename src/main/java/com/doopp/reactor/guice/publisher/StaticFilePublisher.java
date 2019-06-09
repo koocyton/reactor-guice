@@ -15,11 +15,11 @@ public class StaticFilePublisher {
 
     public Mono<Void> sendFile(HttpServerRequest req, HttpServerResponse resp) {
 
-        URL resource = req.uri().endsWith("/")
-                ? getClass().getResource("/public" + req.uri() + "index.html")
-                : getClass().getResource("/public" + req.uri());
+        String resourceUri = req.uri().endsWith("/")
+                ? "/public" + req.uri() + "index.html"
+                : "/public" + req.uri();
 
-        return ReactorGuiceServer.classResourcePath(resource)
+        return ReactorGuiceServer.classResourcePath(resourceUri)
                 .flatMap(path->this.setHeader(path, resp))
                 .flatMap(path -> {
                     if (Files.isDirectory(path)) {
