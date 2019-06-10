@@ -1,13 +1,17 @@
 package com.doopp.reactor.guice.publisher;
 
 import com.doopp.reactor.guice.ApiGatewayDispatcher;
+import com.doopp.reactor.guice.websocket.AbstractWebSocketServerHandle;
 import com.doopp.reactor.guice.websocket.WebSocketServerHandle;
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.cookie.Cookie;
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import reactor.core.publisher.Mono;
+import reactor.netty.NettyPipeline;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.http.server.HttpServerResponse;
@@ -54,7 +58,7 @@ public class ApiGatewayPublisher {
             );
 
         if (req.requestHeaders().get("upgrade").equals("websocket")) {
-            return websocketPublisher.sendMessage(req, resp, null, null);
+            return websocketPublisher.sendMessage(req, resp, new GatewayWsHandle(insideUrl), null);
         }
         else if (req.method() == HttpMethod.POST || req.method() == HttpMethod.PUT) {
             HttpClient.RequestSender sender = (req.method() == HttpMethod.POST) ? httpClient.post() : httpClient.put();
@@ -96,5 +100,41 @@ public class ApiGatewayPublisher {
 
     public boolean checkRequest(HttpServerRequest req) {
         return true;
+    }
+}
+
+
+class GatewayWsHandle extends AbstractWebSocketServerHandle {
+
+    private URL insertUrl;
+
+    private
+
+    GatewayWsHandle(URL insideUrl) {
+        this.insertUrl = insideUrl;
+    }
+
+    @Override
+    public void connected(Channel channel) {
+        HttpClient.create()
+                // .port(port)
+                // .wiretap(true)
+                .websocket()
+                .uri("ws://127.0.0.1:8083/kreactor-rr/ws")
+                .handle((in, out) ->
+                        out.withConnection(conn -> {
+                            in.aggregateFrames().receiveFrames().map(frames -> {
+                                if (frames instanceof TextWebSocketFrame) {
+                                    System.out.println(((TextWebSocketFrame) frames).text());
+                                }
+                                return Mono.empty();
+                            })
+                                    .subscribe();
+                        })
+                                .options(NettyPipeline.SendOptions::flushOnEach)
+                                .sendString(client)
+                )
+                .blockLast();
+        super.connected(channel);
     }
 }
