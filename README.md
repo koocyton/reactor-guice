@@ -35,6 +35,8 @@ Reactor-guice 是一个基于 Google Guice 和 Reactor-netty 的 Reactor 微服�
 0.12.1 静态文件的读取塞入到异步中去处理
        这个版本是一个稳定的版本
 
+0.12.2 优化 Jar 内读取文件的变量
+
 ```
 
 ### 1. 引入 reactor-guice
@@ -44,13 +46,13 @@ Reactor-guice 是一个基于 Google Guice 和 Reactor-netty 的 Reactor 微服�
 <dependency>
     <groupId>com.doopp</groupId>
     <artifactId>reactor-guice</artifactId>
-    <version>0.12.1</version>
+    <version>0.12.2-SNAPSHOT</version>
 </dependency>
 ```
 
 #### gradle
 ```
-compile 'com.doopp:reactor-guice:0.10'
+compile 'com.doopp:reactor-guice:0.12.2-SNAPSHOT'
 ```
 
 ### 2. 创建应用
