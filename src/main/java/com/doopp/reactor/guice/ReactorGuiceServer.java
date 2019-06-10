@@ -66,6 +66,8 @@ public class ReactorGuiceServer {
 
     static final Set<String> classNames = new HashSet<>();
 
+    private static Map<String, FileSystem> jarPathFS = new HashMap<>();
+
     public static ReactorGuiceServer create() {
         return new ReactorGuiceServer();
     }
@@ -349,12 +351,12 @@ public class ReactorGuiceServer {
         // Set<String> handleClasses = new HashSet<>();
         for(String basePackage : basePackages) {
             try {
-                URL resource = this.getClass().getResource("/" + basePackage.replace(".", "/"));
+                // URL resource = this.getClass().getResource("/" + basePackage.replace(".", "/"));
                 // System.out.println("resource.toString() : " + resource.toString());
                 // System.out.println("resource.toURI() : " + resource.toURI());
                 // System.out.println("resource.getFile() : " + resource.getFile());
                 // System.out.println("resource.getPath() : " + resource.getPath());
-                java.nio.file.Path resourcePath = classResourcePath(resource).block();
+                java.nio.file.Path resourcePath = classResourcePath("/" + basePackage.replace(".", "/")).block();
                 if (resourcePath==null) {
                     continue;
                 }
@@ -379,9 +381,6 @@ public class ReactorGuiceServer {
                         return FileVisitResult.CONTINUE;
                     }
                 });
-                if (classFs!=null) {
-                    classFs.close();
-                }
             }
             catch(Exception e) {
                 e.printStackTrace();
@@ -472,9 +471,10 @@ public class ReactorGuiceServer {
 //        return handleClassesName;
     }
 
-    private static FileSystem classFs = null;
+    // private static FileSystem classFs = null;
 
-    public static Mono<java.nio.file.Path> classResourcePath(URL resource) {
+    public static Mono<java.nio.file.Path> classResourcePath(String resourceUri) {
+        URL resource = ReactorGuiceServer.class.getResource(resourceUri);
         return Mono.fromCallable(()->{
             if (resource.getProtocol().equals("jar")) {
                 String[] jarPathInfo = resource.getPath().split("!");
@@ -483,14 +483,13 @@ public class ReactorGuiceServer {
                             ? jarPathInfo[0].substring(6)
                             : jarPathInfo[0].substring(5);
                 }
-                java.nio.file.Path jarPath = Paths.get(jarPathInfo[0]);
-                if (classFs==null || !classFs.isOpen()) {
-                    classFs = FileSystems.newFileSystem(jarPath, null);
+                if (jarPathFS.get(jarPathInfo[0])==null || !jarPathFS.get(jarPathInfo[0]).isOpen()) {
+                    java.nio.file.Path jarPath = Paths.get(jarPathInfo[0]);
+                    jarPathFS.put(jarPathInfo[0], FileSystems.newFileSystem(jarPath, null));
                 }
-                return classFs.getPath(jarPathInfo[1]);
+                return jarPathFS.get(jarPathInfo[0]).getPath(jarPathInfo[1]);
             }
             return Paths.get(resource.toURI());
-        })
-                .subscribeOn(Schedulers.elastic());
+        }).subscribeOn(Schedulers.elastic());
     }
 }
