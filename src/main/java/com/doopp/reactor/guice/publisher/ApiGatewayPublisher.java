@@ -1,6 +1,7 @@
 package com.doopp.reactor.guice.publisher;
 
 import com.doopp.reactor.guice.ApiGatewayDispatcher;
+import com.doopp.reactor.guice.websocket.WebSocketServerHandle;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -21,7 +22,7 @@ public class ApiGatewayPublisher {
         this.apiGatewayDispatcher = apiGatewayDispatcher;
     }
 
-    public Mono<Object> sendResponse(HttpServerRequest req, HttpServerResponse resp) {
+    public Mono<Object> sendResponse(HttpServerRequest req, HttpServerResponse resp, WebsocketPublisher websocketPublisher) {
 
         URL insideUrl = this.apiGatewayDispatcher.getInsideUrl(req.uri());
 
@@ -52,7 +53,10 @@ public class ApiGatewayPublisher {
                 tcpClient.option(ChannelOption.SO_KEEPALIVE, true)
             );
 
-        if (req.method() == HttpMethod.POST || req.method() == HttpMethod.PUT) {
+        if (req.requestHeaders().get("upgrade").equals("websocket")) {
+            return websocketPublisher.sendMessage(req, resp, null, null);
+        }
+        else if (req.method() == HttpMethod.POST || req.method() == HttpMethod.PUT) {
             HttpClient.RequestSender sender = (req.method() == HttpMethod.POST) ? httpClient.post() : httpClient.put();
             return req
                 .receive()

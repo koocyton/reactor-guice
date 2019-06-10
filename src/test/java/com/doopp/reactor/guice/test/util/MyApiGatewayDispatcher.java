@@ -10,6 +10,9 @@ public class MyApiGatewayDispatcher implements ApiGatewayDispatcher {
     @Override
     public URL getInsideUrl(String uri) {
         try {
+            if (uri.equals("/kreactor-rr/ws")) {
+                return new URL("ws://127.0.0.1:8083/kreactor/ws");
+            }
             return new URL("https://www.baidu.com" + uri);
         }
         catch(MalformedURLException e) {

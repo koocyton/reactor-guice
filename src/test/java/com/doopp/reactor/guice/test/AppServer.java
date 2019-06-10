@@ -173,8 +173,8 @@ public class AppServer {
     @Test
     public void testWebsocketClient() throws IOException {
         Properties properties = new Properties();
-        properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
-        // properties.load(new FileInputStream("/Developer/Project/reactor-guice/application.properties"));
+        // properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
+        properties.load(new FileInputStream("/Developer/Project/reactor-guice/application.properties"));
 
         int port = Integer.valueOf(properties.getProperty("server.port", "8081"));
 
@@ -188,7 +188,7 @@ public class AppServer {
             // .port(port)
             // .wiretap(true)
             .websocket()
-            .uri("ws://127.0.0.1:8083/kreactor/ws")
+            .uri("ws://127.0.0.1:8083/kreactor-rr/ws")
             .handle((in, out) ->
                 out.withConnection(conn -> {
                     in.aggregateFrames().receiveFrames().map(frames -> {

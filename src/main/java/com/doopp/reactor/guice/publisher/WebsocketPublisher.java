@@ -18,29 +18,22 @@ public class WebsocketPublisher {
     private static final String CURRENT_CHANNEL = "current_channel";
 
     public Mono<Object> sendMessage(HttpServerRequest request, HttpServerResponse response, WebSocketServerHandle handleObject, Object requestAttribute) {
-        return Mono
-                .just((RequestAttribute) requestAttribute)
+        return Mono.just((RequestAttribute) requestAttribute)
                 .flatMap(r ->
                         response.header("content-type", "text/plain")
                                 .sendWebsocket((in, out) ->
-                                        this.websocketPublisher(in, out, handleObject, r)
+                                        out.withConnection(connect -> this.onConnected(in, connect, handleObject, r))
+                                            // options
+                                            .options(NettyPipeline.SendOptions::flushOnEach)
+                                            // send string
+                                            .sendString(
+                                                    // on send message
+                                                    handleObject.receiveTextMessage(
+                                                            r.getAttribute(CURRENT_CHANNEL, Channel.class)
+                                                    )
+                                            )
                                 )
                 );
-    }
-
-    private Publisher<Void> websocketPublisher(WebsocketInbound in, WebsocketOutbound out, WebSocketServerHandle handleObject, RequestAttribute requestAttribute) {
-        return out.withConnection(connect -> {
-            this.onConnected(in, connect, handleObject, requestAttribute);
-        })
-            // options
-            .options(NettyPipeline.SendOptions::flushOnEach)
-            // send string
-            .sendString(
-                // on send message
-                handleObject.receiveTextMessage(
-                    requestAttribute.getAttribute(CURRENT_CHANNEL, Channel.class)
-                )
-            );
     }
 
     private void onConnected(WebsocketInbound in, Connection connect, WebSocketServerHandle handleObject, RequestAttribute requestAttribute) {
@@ -81,10 +74,10 @@ public class WebsocketPublisher {
             }
             return Mono.empty();
         })
-            .onErrorResume(throwable -> {
-                handleObject.disconnect(channel);
-                return Mono.error(throwable);
-            })
-            .subscribe();
+                .onErrorResume(throwable -> {
+                    handleObject.disconnect(channel);
+                    return Mono.error(throwable);
+                })
+                .subscribe();
     }
 }
