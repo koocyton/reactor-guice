@@ -39,7 +39,7 @@ public class ReactorGuiceServer {
 
     private int port = 8081;
 
-    final private String version = "0.12";
+    final private String version = "0.12.2";
 
     // handle
     private HandlePublisher handlePublisher = new HandlePublisher();
@@ -311,8 +311,8 @@ public class ReactorGuiceServer {
                 }
             })
             .flatMap(o -> {
-                if (o instanceof Mono) {
-                    return ((Mono) o).then();
+                if (o instanceof Mono<?>) {
+                    return ((Mono<?>) o).then();
                 }
                 return (o instanceof String)
                                 ? resp.sendString(Mono.just((String) o)).then()
