@@ -10,6 +10,9 @@
 .idea/
 .gradle/
 
+# Emacs meghanada
+.meghanada/
+
 # Geany project file
 .geany
 
