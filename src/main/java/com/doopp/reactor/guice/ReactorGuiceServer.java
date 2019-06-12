@@ -234,7 +234,7 @@ public class ReactorGuiceServer {
                 ApiGatewayPublisher apiGatewayPublisher = new ApiGatewayPublisher(this.apiGatewayDispatcher);
                 System.out.println("   Any /** →  /** <api gateway model>");
                 routes.route(apiGatewayPublisher::checkRequest, (req, resp) -> httpPublisher(req, resp, null, o ->
-                        apiGatewayPublisher.sendResponse(req, resp, websocketPublisher)
+                        apiGatewayPublisher.sendResponse(req, resp, websocketPublisher, o)
                 ));
             }
             // static server

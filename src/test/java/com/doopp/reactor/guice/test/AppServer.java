@@ -173,8 +173,8 @@ public class AppServer {
     @Test
     public void testWebsocketClient() throws IOException {
         Properties properties = new Properties();
-        // properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
-        properties.load(new FileInputStream("/Developer/Project/reactor-guice/application.properties"));
+        properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
+        // properties.load(new FileInputStream("/Developer/Project/reactor-guice/application.properties"));
 
         int port = Integer.valueOf(properties.getProperty("server.port", "8081"));
 

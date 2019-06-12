@@ -11,7 +11,7 @@ public class MyApiGatewayDispatcher implements ApiGatewayDispatcher {
     public URL getInsideUrl(String uri) {
         try {
             if (uri.equals("/kreactor-rr/ws")) {
-                return new URL("ws://127.0.0.1:8083/kreactor/ws");
+                return new URL("http://127.0.0.1:8083/kreactor/ws");
             }
             return new URL("https://www.baidu.com" + uri);
         }

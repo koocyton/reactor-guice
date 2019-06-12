@@ -19,7 +19,7 @@ public class WebsocketHandle extends AbstractWebSocketServerHandle {
 
     @Override
     public void onTextMessage(TextWebSocketFrame frame, Channel channel) {
-        // System.out.println(frame.text());
+        System.out.println(frame.text());
         super.onTextMessage(frame, channel);
     }
 }

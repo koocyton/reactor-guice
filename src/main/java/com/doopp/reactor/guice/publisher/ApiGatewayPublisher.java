@@ -2,7 +2,6 @@ package com.doopp.reactor.guice.publisher;
 
 import com.doopp.reactor.guice.ApiGatewayDispatcher;
 import com.doopp.reactor.guice.websocket.AbstractWebSocketServerHandle;
-import com.doopp.reactor.guice.websocket.WebSocketServerHandle;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
@@ -10,13 +9,18 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.FluxProcessor;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.ReplayProcessor;
+import reactor.core.scheduler.Schedulers;
 import reactor.netty.NettyPipeline;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.http.server.HttpServerResponse;
 
 import java.net.URL;
+import java.time.Duration;
 
 public class ApiGatewayPublisher {
 
@@ -26,7 +30,7 @@ public class ApiGatewayPublisher {
         this.apiGatewayDispatcher = apiGatewayDispatcher;
     }
 
-    public Mono<Object> sendResponse(HttpServerRequest req, HttpServerResponse resp, WebsocketPublisher websocketPublisher) {
+    public Mono<Object> sendResponse(HttpServerRequest req, HttpServerResponse resp, WebsocketPublisher websocketPublisher, Object requestAttribute) {
 
         URL insideUrl = this.apiGatewayDispatcher.getInsideUrl(req.uri());
 
@@ -57,8 +61,8 @@ public class ApiGatewayPublisher {
                 tcpClient.option(ChannelOption.SO_KEEPALIVE, true)
             );
 
-        if (req.requestHeaders().get("upgrade").equals("websocket")) {
-            return websocketPublisher.sendMessage(req, resp, new GatewayWsHandle(insideUrl), null);
+        if (req.requestHeaders().get("upgrade")!=null && req.requestHeaders().get("upgrade").equals("websocket")) {
+            return websocketPublisher.sendMessage(req, resp, new GatewayWsHandle(insideUrl), requestAttribute);
         }
         else if (req.method() == HttpMethod.POST || req.method() == HttpMethod.PUT) {
             HttpClient.RequestSender sender = (req.method() == HttpMethod.POST) ? httpClient.post() : httpClient.put();
@@ -108,7 +112,9 @@ class GatewayWsHandle extends AbstractWebSocketServerHandle {
 
     private URL insertUrl;
 
-    private
+    private HttpClient.WebsocketSender wsSender = null;
+
+    private FluxProcessor<String, String> client = ReplayProcessor.<String>create().serialize();
 
     GatewayWsHandle(URL insideUrl) {
         this.insertUrl = insideUrl;
@@ -116,25 +122,23 @@ class GatewayWsHandle extends AbstractWebSocketServerHandle {
 
     @Override
     public void connected(Channel channel) {
-        HttpClient.create()
-                // .port(port)
-                // .wiretap(true)
-                .websocket()
-                .uri("ws://127.0.0.1:8083/kreactor-rr/ws")
-                .handle((in, out) ->
-                        out.withConnection(conn -> {
-                            in.aggregateFrames().receiveFrames().map(frames -> {
-                                if (frames instanceof TextWebSocketFrame) {
-                                    System.out.println(((TextWebSocketFrame) frames).text());
-                                }
-                                return Mono.empty();
-                            })
-                                    .subscribe();
-                        })
-                                .options(NettyPipeline.SendOptions::flushOnEach)
-                                .sendString(client)
-                )
-                .blockLast();
+
+        wsSender = HttpClient
+            .create()
+            .websocket()
+            .uri("ws://127.0.0.1:8083/kreactor/ws");
+
+        wsSender.handle((in, out) -> out
+                .options(NettyPipeline.SendOptions::flushOnEach)
+                .sendString(client)
+        ).subscribe();
+
         super.connected(channel);
+    }
+
+    @Override
+    public void onTextMessage(TextWebSocketFrame frame, Channel channel) {
+        client.onNext(frame.text());
+        super.onTextMessage(frame, channel);
     }
 }
