@@ -105,40 +105,39 @@ public class ApiGatewayPublisher {
     public boolean checkRequest(HttpServerRequest req) {
         return true;
     }
-}
 
+    class GatewayWsHandle extends AbstractWebSocketServerHandle {
 
-class GatewayWsHandle extends AbstractWebSocketServerHandle {
+        private URL insertUrl;
 
-    private URL insertUrl;
+        private HttpClient.WebsocketSender wsSender = null;
 
-    private HttpClient.WebsocketSender wsSender = null;
+        private FluxProcessor<String, String> client = ReplayProcessor.<String>create().serialize();
 
-    private FluxProcessor<String, String> client = ReplayProcessor.<String>create().serialize();
+        GatewayWsHandle(URL insideUrl) {
+            this.insertUrl = insideUrl;
+        }
 
-    GatewayWsHandle(URL insideUrl) {
-        this.insertUrl = insideUrl;
-    }
+        @Override
+        public void connected(Channel channel) {
 
-    @Override
-    public void connected(Channel channel) {
+            wsSender = HttpClient
+                .create()
+                .websocket()
+                .uri("ws://127.0.0.1:8083/kreactor/ws");
 
-        wsSender = HttpClient
-            .create()
-            .websocket()
-            .uri("ws://127.0.0.1:8083/kreactor/ws");
-
-        wsSender.handle((in, out) -> out
+            wsSender.handle((in, out) -> out
                 .options(NettyPipeline.SendOptions::flushOnEach)
                 .sendString(client)
-        ).subscribe();
+            ).subscribe();
 
-        super.connected(channel);
-    }
+            super.connected(channel);
+        }
 
-    @Override
-    public void onTextMessage(TextWebSocketFrame frame, Channel channel) {
-        client.onNext(frame.text());
-        super.onTextMessage(frame, channel);
+        @Override
+        public void onTextMessage(TextWebSocketFrame frame, Channel channel) {
+            client.onNext(frame.text());
+            super.onTextMessage(frame, channel);
+        }
     }
 }
