@@ -9,25 +9,27 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxProcessor;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.ReplayProcessor;
-import reactor.core.scheduler.Schedulers;
 import reactor.netty.NettyPipeline;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.http.server.HttpServerResponse;
 
 import java.net.URL;
-import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 
 public class ApiGatewayPublisher {
 
     private ApiGatewayDispatcher apiGatewayDispatcher;
 
+    private GatewayWsHandle gatewayWsHandle;
+
     public ApiGatewayPublisher(ApiGatewayDispatcher apiGatewayDispatcher) {
         this.apiGatewayDispatcher = apiGatewayDispatcher;
+        this.gatewayWsHandle = new GatewayWsHandle();
     }
 
     public Mono<Object> sendResponse(HttpServerRequest req, HttpServerResponse resp, WebsocketPublisher websocketPublisher, Object requestAttribute) {
@@ -62,7 +64,7 @@ public class ApiGatewayPublisher {
             );
 
         if (req.requestHeaders().get("upgrade")!=null && req.requestHeaders().get("upgrade").equals("websocket")) {
-            return websocketPublisher.sendMessage(req, resp, new GatewayWsHandle(insideUrl), requestAttribute);
+            return websocketPublisher.sendMessage(req, resp, this.gatewayWsHandle, requestAttribute);
         }
         else if (req.method() == HttpMethod.POST || req.method() == HttpMethod.PUT) {
             HttpClient.RequestSender sender = (req.method() == HttpMethod.POST) ? httpClient.post() : httpClient.put();
@@ -108,27 +110,23 @@ public class ApiGatewayPublisher {
 
     class GatewayWsHandle extends AbstractWebSocketServerHandle {
 
-        private URL insertUrl;
+        private Map<String, HttpClient.WebsocketSender> senders = new HashMap<>();
 
-        private HttpClient.WebsocketSender wsSender = null;
-
-        private FluxProcessor<String, String> client = ReplayProcessor.<String>create().serialize();
-
-        GatewayWsHandle(URL insideUrl) {
-            this.insertUrl = insideUrl;
-        }
+        // ReplayProcessor.<String>create().serialize();
+        private Map<String, FluxProcessor<String, String>> clients = new HashMap<>();
 
         @Override
         public void connected(Channel channel) {
 
-            wsSender = HttpClient
+            String channelId = channel.id().asLongText();
+            senders.put(channelId, HttpClient
                 .create()
                 .websocket()
-                .uri("ws://127.0.0.1:8083/kreactor/ws");
+                .uri("ws://127.0.0.1:8083/kreactor/ws"));
 
-            wsSender.handle((in, out) -> out
+            senders.get(channelId).handle((in, out) -> out
                 .options(NettyPipeline.SendOptions::flushOnEach)
-                .sendString(client)
+                .sendString(clients.get(channelId))
             ).subscribe();
 
             super.connected(channel);
@@ -136,7 +134,8 @@ public class ApiGatewayPublisher {
 
         @Override
         public void onTextMessage(TextWebSocketFrame frame, Channel channel) {
-            client.onNext(frame.text());
+            String channelId = channel.id().asLongText();
+            clients.get(channelId).onNext(frame.text());
             super.onTextMessage(frame, channel);
         }
     }
