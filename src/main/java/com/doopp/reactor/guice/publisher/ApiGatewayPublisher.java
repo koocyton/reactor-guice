@@ -114,8 +114,6 @@ public class ApiGatewayPublisher {
 
         // ReplayProcessor.<String>create().serialize();
         private final Map<String, FluxProcessor<String, String>> fromClientMessage = new HashMap<>();
-
-
         private final Map<String, FluxProcessor<String, String>> fromServerMessage = new HashMap<>();
 
         @Override
