@@ -2,6 +2,7 @@ package com.doopp.reactor.guice.publisher;
 
 import com.doopp.reactor.guice.ApiGatewayDispatcher;
 import com.doopp.reactor.guice.websocket.AbstractWebSocketServerHandle;
+import com.doopp.reactor.guice.websocket.WebSocketServerHandle;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
@@ -9,6 +10,7 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.websocketx.*;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxProcessor;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.ReplayProcessor;
@@ -108,7 +110,7 @@ public class ApiGatewayPublisher {
         return true;
     }
 
-    class GatewayWsHandle extends AbstractWebSocketServerHandle {
+    class GatewayWsHandle implements WebSocketServerHandle {
 
         private Map<String, HttpClient.WebsocketSender> senders = new HashMap<>();
 
@@ -139,27 +141,58 @@ public class ApiGatewayPublisher {
                 .options(NettyPipeline.SendOptions::flushOnEach)
                 .sendString(fromClientMessage.get(channelId))
             ).subscribe();
+        }
 
-            super.connected(channel);
+        @Override
+        public void connected(Channel channel, String channelKey) {
+
+        }
+
+        @Override
+        public void sendTextMessage(String text, String channelKey) {
+
+        }
+
+        @Override
+        public Flux<String> receiveTextMessage(Channel channel) {
+            return null;
         }
 
         @Override
         public void onTextMessage(TextWebSocketFrame frame, Channel channel) {
+            this.sendTextMessage(frame, channel);
+        }
+
+        private void sendTextMessage(TextWebSocketFrame frame, Channel channel) {
             String channelId = channel.id().asLongText();
             fromClientMessage.get(channelId).onNext(frame.text());
-            // super.onTextMessage(frame, channel);
         }
 
         @Override
         public void onBinaryMessage(BinaryWebSocketFrame frame, Channel channel) {
+            this.sendBinaryMessage(frame, channel);
+        }
+
+        private void sendBinaryMessage(BinaryWebSocketFrame frame, Channel channel) {
+            channel.writeAndFlush(frame.retain());
         }
 
         @Override
         public void onPingMessage(PingWebSocketFrame frame, Channel channel) {
         }
 
+        public void sendPingMessage(BinaryWebSocketFrame frame, Channel channel) {
+        }
+
         @Override
         public void onPongMessage(PongWebSocketFrame frame, Channel channel) {
+        }
+
+        public void sendPongMessage(BinaryWebSocketFrame frame, Channel channel) {
+        }
+
+        @Override
+        public void disconnect(Channel channel) {
         }
     }
 }
