@@ -44,10 +44,11 @@ public abstract class AbstractWebSocketServerHandle implements WebSocketServerHa
 
     @Override
     public void sendTextMessage(String text, String channelKey) {
-        Flux.just(text).map(Object::toString)
-                .subscribe(s->
-                        queueMessageMap.get(channelKey).onNext(s)
-                );
+        queueMessageMap.get(channelKey).onNext(text);
+//        Flux.just(text).map(Object::toString)
+//                .subscribe(s->
+//                        queueMessageMap.get(channelKey).onNext(s)
+//                );
     }
 
     @Override

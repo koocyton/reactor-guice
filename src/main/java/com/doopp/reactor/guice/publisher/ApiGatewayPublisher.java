@@ -113,20 +113,35 @@ public class ApiGatewayPublisher {
         private Map<String, HttpClient.WebsocketSender> senders = new HashMap<>();
 
         // ReplayProcessor.<String>create().serialize();
-        private Map<String, FluxProcessor<String, String>> clients = new HashMap<>();
+        private final Map<String, FluxProcessor<String, String>> fromClientMessage = new HashMap<>();
+
+
+        private final Map<String, FluxProcessor<String, String>> fromServerMessage = new HashMap<>();
 
         @Override
         public void connected(Channel channel) {
 
             String channelId = channel.id().asLongText();
+
             senders.put(channelId, HttpClient
                 .create()
                 .websocket()
                 .uri("ws://127.0.0.1:8083/kreactor/ws"));
 
             senders.get(channelId).handle((in, out) -> out
+                .withConnection(conn -> {
+                    fromClientMessage.put(channelId, ReplayProcessor.<String>create().serialize());
+                    fromServerMessage.put(channelId, ReplayProcessor.<String>create().serialize());
+                    in.aggregateFrames().receiveFrames().map(frames -> {
+                        if (frames instanceof TextWebSocketFrame) {
+
+                            fromServerMessage.get(channelId).onNext(((TextWebSocketFrame) frames).text());
+                        }
+                        return Mono.empty();
+                    }).subscribe();
+                })
                 .options(NettyPipeline.SendOptions::flushOnEach)
-                .sendString(clients.get(channelId))
+                .sendString(fromClientMessage.get(channelId))
             ).subscribe();
 
             super.connected(channel);
@@ -135,7 +150,7 @@ public class ApiGatewayPublisher {
         @Override
         public void onTextMessage(TextWebSocketFrame frame, Channel channel) {
             String channelId = channel.id().asLongText();
-            clients.get(channelId).onNext(frame.text());
+            fromClientMessage.get(channelId).onNext(frame.text());
             super.onTextMessage(frame, channel);
         }
     }
