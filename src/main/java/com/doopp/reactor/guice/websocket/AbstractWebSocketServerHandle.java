@@ -39,6 +39,7 @@ public abstract class AbstractWebSocketServerHandle implements WebSocketServerHa
 
     @Override
     public void sendTextMessage(String text, Channel channel) {
+        // channel.writeAndFlush(text);
         this.sendTextMessage(text, channel.attr(CHANNEL_UNIQUE_KEY).get());
     }
 
@@ -63,7 +64,7 @@ public abstract class AbstractWebSocketServerHandle implements WebSocketServerHa
 
     @Override
     public void onBinaryMessage(BinaryWebSocketFrame frame, Channel channel) {
-        channel.writeAndFlush(Unpooled.buffer(0));
+        // channel.writeAndFlush(Unpooled.buffer(0));
     }
 
     @Override

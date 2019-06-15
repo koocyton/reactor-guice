@@ -8,7 +8,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.cookie.Cookie;
-import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.*;
 import reactor.core.publisher.FluxProcessor;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.ReplayProcessor;
@@ -114,12 +114,13 @@ public class ApiGatewayPublisher {
 
         // ReplayProcessor.<String>create().serialize();
         private final Map<String, FluxProcessor<String, String>> fromClientMessage = new HashMap<>();
-        private final Map<String, FluxProcessor<String, String>> fromServerMessage = new HashMap<>();
 
         @Override
         public void connected(Channel channel) {
 
             String channelId = channel.id().asLongText();
+
+            fromClientMessage.put(channelId, ReplayProcessor.<String>create().serialize());
 
             senders.put(channelId, HttpClient
                 .create()
@@ -128,12 +129,9 @@ public class ApiGatewayPublisher {
 
             senders.get(channelId).handle((in, out) -> out
                 .withConnection(conn -> {
-                    fromClientMessage.put(channelId, ReplayProcessor.<String>create().serialize());
-                    fromServerMessage.put(channelId, ReplayProcessor.<String>create().serialize());
                     in.aggregateFrames().receiveFrames().map(frames -> {
                         if (frames instanceof TextWebSocketFrame) {
-
-                            fromServerMessage.get(channelId).onNext(((TextWebSocketFrame) frames).text());
+                            this.sendTextMessage(((TextWebSocketFrame) frames).text(), channel);
                         }
                         return Mono.empty();
                     }).subscribe();
@@ -149,7 +147,19 @@ public class ApiGatewayPublisher {
         public void onTextMessage(TextWebSocketFrame frame, Channel channel) {
             String channelId = channel.id().asLongText();
             fromClientMessage.get(channelId).onNext(frame.text());
-            super.onTextMessage(frame, channel);
+            // super.onTextMessage(frame, channel);
+        }
+
+        @Override
+        public void onBinaryMessage(BinaryWebSocketFrame frame, Channel channel) {
+        }
+
+        @Override
+        public void onPingMessage(PingWebSocketFrame frame, Channel channel) {
+        }
+
+        @Override
+        public void onPongMessage(PongWebSocketFrame frame, Channel channel) {
         }
     }
 }

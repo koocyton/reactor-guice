@@ -32,8 +32,8 @@ public class AppServer {
     public void testServer() throws IOException {
 
         Properties properties = new Properties();
-        // properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
-        properties.load(new FileInputStream("/Developer/Project/reactor-guice/application.properties"));
+        properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
+        // properties.load(new FileInputStream("/Developer/Project/reactor-guice/application.properties"));
 
 
 
@@ -169,9 +169,12 @@ public class AppServer {
         System.out.println(hhe);
     }
 
-
     @Test
-    public void testWebsocketClient() throws IOException {
+    public void testWebsocketClient2() throws IOException {
+        testWebsocketClient();
+    }
+
+    private static void testWebsocketClient() throws IOException {
         Properties properties = new Properties();
         properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
         // properties.load(new FileInputStream("/Developer/Project/reactor-guice/application.properties"));
@@ -193,7 +196,7 @@ public class AppServer {
                 out.withConnection(conn -> {
                     in.aggregateFrames().receiveFrames().map(frames -> {
                         if (frames instanceof TextWebSocketFrame) {
-                            System.out.println(((TextWebSocketFrame) frames).text());
+                            System.out.println("Receive text message " + ((TextWebSocketFrame) frames).text());
                         }
                         return Mono.empty();
                     })
