@@ -36,6 +36,8 @@ Reactor-guice 是一个基于 Google Guice 和 Reactor-netty 的 Reactor 微服�
        这个版本是一个稳定的版本
 
 0.12.2 优化 Jar 内读取文件的变量
+       简化 websocket 的接口
+       网关模式增加 websocket
 
 ```
 
