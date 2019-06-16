@@ -191,7 +191,7 @@ public class AppServer {
             // .port(port)
             // .wiretap(true)
             .websocket()
-            .uri("ws://127.0.0.1:8083/kreactor-rr/ws")
+            .uri("ws://127.0.0.1:8083/kreactor/ws")
             .handle((in, out) ->
                 out.withConnection(conn -> {
                     in.aggregateFrames().receiveFrames().map(frames -> {

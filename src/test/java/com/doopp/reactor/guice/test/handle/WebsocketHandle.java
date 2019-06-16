@@ -12,14 +12,7 @@ import javax.ws.rs.Path;
 public class WebsocketHandle extends AbstractWebSocketServerHandle {
 
     @Override
-    public void connected(Channel channel) {
-        // System.out.println(channel.id());
-        super.connected(channel);
-    }
-
-    @Override
     public void onTextMessage(TextWebSocketFrame frame, Channel channel) {
-        System.out.println("Server get Message " + frame.text());
-        super.onTextMessage(frame, channel);
+        this.sendTextMessage(frame,channel);
     }
 }

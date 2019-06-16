@@ -1,97 +1,78 @@
 package com.doopp.reactor.guice.websocket;
 
+import com.doopp.reactor.guice.RequestAttribute;
 import io.netty.channel.Channel;
-import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
-import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
-import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
-import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
-import io.netty.util.AttributeKey;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.FluxProcessor;
-import reactor.core.publisher.ReplayProcessor;
-
-import java.util.HashMap;
-import java.util.Map;
+import io.netty.handler.codec.http.websocketx.*;
 
 public abstract class AbstractWebSocketServerHandle implements WebSocketServerHandle {
 
-    private Map<String, Channel> channelMap = new HashMap<>();
-
-    private Map<String, FluxProcessor<String, String>> queueMessageMap = new HashMap<>();
-
-    private Map<String, Channel[]> channelGroupMap = new HashMap<>();
-
-    private static AttributeKey<String> CHANNEL_UNIQUE_KEY = AttributeKey.newInstance("channel_unique_key");
-
     @Override
-    public void connected(Channel channel) {
-        String channelKey = channel.id().asShortText();
-        this.connected(channel, channelKey);
+    public void onConnect(Channel channel) {
+        RequestAttribute requestAttribute = channel.attr(RequestAttribute.REQUEST_ATTRIBUTE).get();
     }
 
     @Override
-    public synchronized void connected(Channel channel, String channelKey) {
-        channel.attr(CHANNEL_UNIQUE_KEY).set(channelKey);
-        channelMap.put(channelKey, channel);
-        queueMessageMap.put(channelKey, ReplayProcessor.create());
-    }
-
-    @Override
-    public void sendTextMessage(String text, Channel channel) {
-        // channel.writeAndFlush(text);
-        this.sendTextMessage(text, channel.attr(CHANNEL_UNIQUE_KEY).get());
-    }
-
-    @Override
-    public void sendTextMessage(String text, String channelKey) {
-        queueMessageMap.get(channelKey).onNext(text);
-//        Flux.just(text).map(Object::toString)
-//                .subscribe(s->
-//                        queueMessageMap.get(channelKey).onNext(s)
-//                );
-    }
-
-    @Override
-    public Flux<String> receiveTextMessage(Channel channel) {
-        return queueMessageMap.get(channel.attr(CHANNEL_UNIQUE_KEY).get());
-    }
-
-    @Override
-    public void onTextMessage(TextWebSocketFrame frame, Channel channel) {
-        this.sendTextMessage(frame.text(), channel);
-    }
-
-    @Override
-    public void onBinaryMessage(BinaryWebSocketFrame frame, Channel channel) {
-        // channel.writeAndFlush(Unpooled.buffer(0));
-    }
-
-    @Override
-    public void onPingMessage(PingWebSocketFrame frame, Channel channel) {
-        channel.writeAndFlush(new PongWebSocketFrame());
-    }
-
-    @Override
-    public void onPongMessage(PongWebSocketFrame frame, Channel channel) {
-        channel.writeAndFlush(new PingWebSocketFrame());
-    }
-
-    @Override
-    public void disconnect(Channel channel) {
-        if (channel!=null && channel.attr(CHANNEL_UNIQUE_KEY) != null) {
-            String channelKey = channel.attr(CHANNEL_UNIQUE_KEY).get();
-            // queueMessageMap.get(channelKey).dispose();
-            channelMap.remove(channelKey);
-            queueMessageMap.remove(channelKey);
+    public void handleEvent(WebSocketFrame frame, Channel channel) {
+        try {
+            if (frame instanceof TextWebSocketFrame) {
+                this.onTextMessage((TextWebSocketFrame) frame, channel);
+            } else if (frame instanceof BinaryWebSocketFrame) {
+                this.onBinaryMessage((BinaryWebSocketFrame) frame, channel);
+            } else if (frame instanceof PingWebSocketFrame) {
+                this.onPingMessage((PingWebSocketFrame) frame, channel);
+            } else if (frame instanceof PongWebSocketFrame) {
+                this.onPongMessage((PongWebSocketFrame) frame, channel);
+            } else if (frame instanceof CloseWebSocketFrame) {
+                this.onClose((CloseWebSocketFrame) frame, channel);
+            }
         }
-        if (channel!=null && channel.isActive()) {
-            channel.disconnect();
+        catch (Exception e) {
+            this.onError(channel, e);
+        }
+    }
+
+    @Override
+    public void onClose(CloseWebSocketFrame frame, Channel channel) {
+        if (channel.isOpen() && channel.isActive()) {
             channel.close();
         }
-        // log.info("User leave : {}", channelMap.size());
     }
 
-    public Map<String, Channel> getChannelMap() {
-        return channelMap;
+    @Override
+    public void onError(Channel channel, Throwable error) {
+        channel.writeAndFlush(new TextWebSocketFrame(error.getMessage()));
+        this.onClose(null, channel);
+    }
+
+    protected void sendTextMessage(TextWebSocketFrame frame, Channel channel) {
+        channel.writeAndFlush(frame.retain());
+    }
+
+    protected void onTextMessage(TextWebSocketFrame frame, Channel channel) {
+        // channel.writeAndFlush(frame);
+    }
+
+    protected void sendBinaryMessage(BinaryWebSocketFrame frame, Channel channel) {
+        channel.writeAndFlush(frame.retain());
+    }
+
+    protected void onBinaryMessage(BinaryWebSocketFrame frame, Channel channel) {
+        // channel.writeAndFlush(frame);
+    }
+
+    protected void sendPingMessage(PingWebSocketFrame frame, Channel channel) {
+        channel.writeAndFlush(frame.retain());
+    }
+
+    protected void onPingMessage(PingWebSocketFrame frame, Channel channel) {
+        this.sendPongMessage(new PongWebSocketFrame(), channel);
+    }
+
+    protected void sendPongMessage(PongWebSocketFrame frame, Channel channel) {
+        channel.writeAndFlush(frame.retain());
+    }
+
+    protected void onPongMessage(PongWebSocketFrame frame, Channel channel) {
+        this.sendPingMessage(new PingWebSocketFrame(), channel);
     }
 }
