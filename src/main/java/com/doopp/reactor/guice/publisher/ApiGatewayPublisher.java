@@ -37,6 +37,8 @@ public class ApiGatewayPublisher {
 
         String insideUrlPath = this.apiGatewayDispatcher.insideUrl(req.uri());
 
+        // System.out.println(req.uri() + "\n" + req.requestHeaders());
+
         if (req.requestHeaders().get("upgrade")!=null && req.requestHeaders().get("upgrade").equals("websocket")) {
             if (requestAttribute instanceof RequestAttribute) {
                 ((RequestAttribute) requestAttribute).setAttribute("websocket-inside-url", insideUrlPath);
@@ -129,16 +131,16 @@ public class ApiGatewayPublisher {
         @Override
         public void onConnect(Channel channel) {
 
-            String channelId = channel.id().asLongText();
-
-            messages.put(channelId, ReplayProcessor.<WebSocketFrame>create().serialize());
-
             RequestAttribute requestAttribute = channel.attr(RequestAttribute.REQUEST_ATTRIBUTE).get();
             String wsUrl = requestAttribute.getAttribute("websocket-inside-url", String.class);
 
             if (wsUrl==null) {
-                return;
+                this.onClose(null, channel);
             }
+
+            String channelId = channel.id().asLongText();
+
+            messages.put(channelId, ReplayProcessor.<WebSocketFrame>create().serialize());
 
             clients.put(channelId, HttpClient
                 .create()
