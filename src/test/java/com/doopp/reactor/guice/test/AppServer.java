@@ -16,6 +16,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxProcessor;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.ReplayProcessor;
+import reactor.core.scheduler.Schedulers;
 import reactor.netty.NettyPipeline;
 import reactor.netty.http.client.HttpClient;
 
@@ -170,7 +171,22 @@ public class AppServer {
     }
 
     @Test
+    public void testWebsocketClient1() throws IOException {
+        testWebsocketClient();
+    }
+
+    @Test
     public void testWebsocketClient2() throws IOException {
+        testWebsocketClient();
+    }
+
+    @Test
+    public void testWebsocketClient3() throws IOException {
+        testWebsocketClient();
+    }
+
+    @Test
+    public void testWebsocketClient4() throws IOException {
         testWebsocketClient();
     }
 
@@ -191,7 +207,7 @@ public class AppServer {
             // .port(port)
             // .wiretap(true)
             .websocket()
-            .uri("ws://127.0.0.1:8083/kreactor/ws")
+            .uri("ws://127.0.0.1:8083/kreactor-rr/ws")
             .handle((in, out) ->
                 out.withConnection(conn -> {
                     in.aggregateFrames().receiveFrames().map(frames -> {

@@ -1,8 +1,8 @@
 package com.doopp.reactor.guice.publisher;
 
 import com.doopp.reactor.guice.ApiGatewayDispatcher;
+import com.doopp.reactor.guice.RequestAttribute;
 import com.doopp.reactor.guice.websocket.AbstractWebSocketServerHandle;
-import com.doopp.reactor.guice.websocket.WebSocketServerHandle;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
@@ -10,7 +10,6 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.websocketx.*;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxProcessor;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.ReplayProcessor;
@@ -36,7 +35,21 @@ public class ApiGatewayPublisher {
 
     public Mono<Object> sendResponse(HttpServerRequest req, HttpServerResponse resp, WebsocketPublisher websocketPublisher, Object requestAttribute) {
 
-        URL insideUrl = this.apiGatewayDispatcher.getInsideUrl(req.uri());
+        String insideUrlPath = this.apiGatewayDispatcher.insideUrl(req.uri());
+
+        if (req.requestHeaders().get("upgrade")!=null && req.requestHeaders().get("upgrade").equals("websocket")) {
+            if (requestAttribute instanceof RequestAttribute) {
+                ((RequestAttribute) requestAttribute).setAttribute("websocket-inside-url", insideUrlPath);
+            }
+            return websocketPublisher.sendMessage(req, resp, this.gatewayWsHandle, requestAttribute);
+        }
+
+        URL insideUrl;
+        try {
+            insideUrl = new URL(insideUrlPath);
+        } catch (Exception e) {
+            return Mono.error(e);
+        }
 
         HttpClient httpClient = HttpClient.create()
             .headers(httpHeaders -> {
@@ -65,10 +78,7 @@ public class ApiGatewayPublisher {
                 tcpClient.option(ChannelOption.SO_KEEPALIVE, true)
             );
 
-        if (req.requestHeaders().get("upgrade")!=null && req.requestHeaders().get("upgrade").equals("websocket")) {
-            return websocketPublisher.sendMessage(req, resp, this.gatewayWsHandle, requestAttribute);
-        }
-        else if (req.method() == HttpMethod.POST || req.method() == HttpMethod.PUT) {
+        if (req.method() == HttpMethod.POST || req.method() == HttpMethod.PUT) {
             HttpClient.RequestSender sender = (req.method() == HttpMethod.POST) ? httpClient.post() : httpClient.put();
             return req
                 .receive()
@@ -112,5 +122,58 @@ public class ApiGatewayPublisher {
 
     private class GatewayWsHandle extends AbstractWebSocketServerHandle {
 
+        private Map<String, HttpClient.WebsocketSender> clients = new HashMap<>();
+
+        private Map<String, FluxProcessor<WebSocketFrame, WebSocketFrame>> messages = new HashMap<>();
+
+        @Override
+        public void onConnect(Channel channel) {
+
+            String channelId = channel.id().asLongText();
+
+            messages.put(channelId, ReplayProcessor.<WebSocketFrame>create().serialize());
+
+            RequestAttribute requestAttribute = channel.attr(RequestAttribute.REQUEST_ATTRIBUTE).get();
+            String wsUrl = requestAttribute.getAttribute("websocket-inside-url", String.class);
+
+            if (wsUrl==null) {
+                return;
+            }
+
+            clients.put(channelId, HttpClient
+                .create()
+                .websocket()
+                .uri(wsUrl));
+
+            clients.get(channelId).handle((in, out) -> out
+                .withConnection(con->{
+                    // channel
+                    Channel ch = con.channel();
+                    // on disconnect
+                    con.onDispose().subscribe(null, null, () ->{
+                        if (ch.isOpen() && ch.isActive()) {
+                            ch.close();
+                            clients.remove(ch.id().asLongText());
+                        }
+                    });
+                    in.aggregateFrames().receiveFrames().subscribe(frame -> {
+                        if (frame instanceof CloseWebSocketFrame && ch.isOpen() && ch.isActive()) {
+                            ch.close();
+                            clients.remove(ch.id().asLongText());
+                            return;
+                        }
+                        channel.writeAndFlush(frame.retain());
+                    });
+                })
+                .options(NettyPipeline.SendOptions::flushOnEach)
+                .sendObject(messages.get(channelId))
+            ).subscribe();
+        }
+
+        @Override
+        public void handleEvent(WebSocketFrame frame, Channel channel) {
+            String channelId = channel.id().asLongText();
+            messages.get(channelId).onNext(frame.retain());
+        }
     }
 }

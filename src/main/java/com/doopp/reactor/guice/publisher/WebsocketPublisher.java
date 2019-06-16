@@ -3,13 +3,17 @@ package com.doopp.reactor.guice.publisher;
 import com.doopp.reactor.guice.RequestAttribute;
 import com.doopp.reactor.guice.websocket.WebSocketServerHandle;
 import io.netty.channel.Channel;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.ReplayProcessor;
 import reactor.netty.NettyPipeline;
 import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.http.server.HttpServerResponse;
 
+import java.time.Duration;
+
 public class WebsocketPublisher {
+
+    private final Flux<String> rp = Flux.just("").delayElements(Duration.ofDays(365));
 
     public Mono<Object> sendMessage(HttpServerRequest request, HttpServerResponse response, WebSocketServerHandle handleObject, Object requestAttribute) {
         return Mono.just((RequestAttribute) requestAttribute)
@@ -37,13 +41,7 @@ public class WebsocketPublisher {
                         // options
                         .options(NettyPipeline.SendOptions::flushOnEach)
                         // send string
-                        .sendString(
-                            ReplayProcessor.create()
-                            // on send message
-                            // handleObject.receiveTextMessage(
-                            //        r.getAttribute(CURRENT_CHANNEL, Channel.class)
-                            //)
-                        )
+                        .sendString(rp)
                     )
             );
     }
