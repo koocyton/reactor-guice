@@ -9,6 +9,7 @@ import com.google.inject.name.Names;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.util.CharsetUtil;
 import org.junit.Test;
@@ -33,8 +34,8 @@ public class AppServer {
     public void testServer() throws IOException {
 
         Properties properties = new Properties();
-        properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
-        // properties.load(new FileInputStream("/Developer/Project/reactor-guice/application.properties"));
+        // properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
+        properties.load(new FileInputStream("/Developer/Project/reactor-guice/application.properties"));
 
 
 
@@ -192,8 +193,8 @@ public class AppServer {
 
     private static void testWebsocketClient() throws IOException {
         Properties properties = new Properties();
-        properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
-        // properties.load(new FileInputStream("/Developer/Project/reactor-guice/application.properties"));
+        // properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
+        properties.load(new FileInputStream("/Developer/Project/reactor-guice/application.properties"));
 
         int port = Integer.valueOf(properties.getProperty("server.port", "8081"));
 
@@ -207,12 +208,18 @@ public class AppServer {
             // .port(port)
             // .wiretap(true)
             .websocket()
-            .uri("ws://127.0.0.1:8083/kreactor-rr/ws")
+            .uri("ws://127.0.0.1:8083/kreactor/ws")
             .handle((in, out) ->
                 out.withConnection(conn -> {
                     in.aggregateFrames().receiveFrames().map(frames -> {
                         if (frames instanceof TextWebSocketFrame) {
                             System.out.println("Receive text message " + ((TextWebSocketFrame) frames).text());
+                        }
+                        else if (frames instanceof BinaryWebSocketFrame) {
+                            System.out.println("Receive binary message " + frames.content());
+                        }
+                        else {
+                            System.out.println("Receive normal message " + frames.content());
                         }
                         return Mono.empty();
                     })
