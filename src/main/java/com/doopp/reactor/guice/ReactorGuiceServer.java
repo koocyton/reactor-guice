@@ -13,6 +13,9 @@ import io.netty.channel.ChannelOption;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.ssl.JdkSslContext;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -22,13 +25,18 @@ import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.http.server.HttpServerResponse;
 import reactor.netty.http.server.HttpServerRoutes;
 
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
 import javax.ws.rs.*;
 import javax.ws.rs.Path;
 import javax.ws.rs.core.MediaType;
+import java.io.FileInputStream;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.security.KeyStore;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -135,10 +143,19 @@ public class ReactorGuiceServer {
             modules.add(new AutoImportModule());
             this.injector = Guice.createInjector(modules);
         }
+
+        // ssl
+        KeyStore keyStore = KeyStore.getInstance("JKS");
+        keyStore.load(jksFile.getInputStream(), this.jksPassword.toCharArray());
+        KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+        keyManagerFactory.init(keyStore, this.jksSecret.toCharArray());
+        SslContext sslContext = SslContextBuilder.forServer(keyManagerFactory).build();
+
         // 启动服务
         DisposableServer disposableServer = HttpServer.create()
             .tcpConfiguration(tcpServer ->
                 tcpServer.option(ChannelOption.SO_KEEPALIVE, true)
+                    .secure(s->s.sslContext(sslContext))
             )
             .route(this.routesBuilder())
             .host(this.host)
