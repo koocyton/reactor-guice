@@ -11,12 +11,13 @@ import org.junit.Test;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.security.cert.CertificateException;
 import java.util.Properties;
 
 public class ApiGatewayServer {
 
     @Test
-    public void testApiGatewayModel() throws IOException {
+    public void testApiGatewayModel() throws IOException, CertificateException {
 
         Properties properties = new Properties();
         properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));

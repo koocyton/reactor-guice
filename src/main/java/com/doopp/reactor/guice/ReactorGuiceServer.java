@@ -16,14 +16,12 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.ssl.JdkSslContext;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.DisposableServer;
-import reactor.netty.http.server.HttpServer;
-import reactor.netty.http.server.HttpServerRequest;
-import reactor.netty.http.server.HttpServerResponse;
-import reactor.netty.http.server.HttpServerRoutes;
+import reactor.netty.http.server.*;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
@@ -37,6 +35,8 @@ import java.net.URL;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.security.KeyStore;
+import java.security.cert.CertificateEncodingException;
+import java.security.cert.CertificateException;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -136,7 +136,7 @@ public class ReactorGuiceServer {
         return this;
     }
 
-    public void launch() {
+    public void launch() throws CertificateException {
 
         // 如果 injector 没有设定，就使用自动扫描的注入
         if (this.injector==null) {
@@ -145,17 +145,20 @@ public class ReactorGuiceServer {
         }
 
         // ssl
-        KeyStore keyStore = KeyStore.getInstance("JKS");
-        keyStore.load(jksFile.getInputStream(), this.jksPassword.toCharArray());
-        KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-        keyManagerFactory.init(keyStore, this.jksSecret.toCharArray());
-        SslContext sslContext = SslContextBuilder.forServer(keyManagerFactory).build();
+//        KeyStore keyStore = KeyStore.getInstance("JKS");
+//        keyStore.load(jksFile.getInputStream(), this.jksPassword.toCharArray());
+//        KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+//        keyManagerFactory.init(keyStore, this.jksSecret.toCharArray());
+//        SslContext sslContext = SslContextBuilder.forServer(keyManagerFactory).build();
+
+        SelfSignedCertificate cert = new SelfSignedCertificate();
+        SslContextBuilder serverOptions = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
 
         // 启动服务
         DisposableServer disposableServer = HttpServer.create()
             .tcpConfiguration(tcpServer ->
                 tcpServer.option(ChannelOption.SO_KEEPALIVE, true)
-                    .secure(s->s.sslContext(sslContext))
+                    .secure(s->s.sslContext(serverOptions))
             )
             .route(this.routesBuilder())
             .host(this.host)

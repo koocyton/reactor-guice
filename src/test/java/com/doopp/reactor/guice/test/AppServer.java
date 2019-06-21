@@ -25,13 +25,14 @@ import javax.ws.rs.core.MediaType;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.Properties;
 
 public class AppServer {
 
     @Test
-    public void testServer() throws IOException {
+    public void testServer() throws IOException, CertificateException {
 
         Properties properties = new Properties();
         // properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
