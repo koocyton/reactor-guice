@@ -181,8 +181,12 @@ public class ReactorGuiceServer {
         DisposableServer disposableServer = HttpServer.create()
             .tcpConfiguration(tcpServer -> {
                 return tcpServer.option(ChannelOption.SO_KEEPALIVE, true)
-                        .host(this.host)
-                        .port(this.port);
+                        .secure(s -> s.sslContext(sslContext))
+                        .bootstrap(b->{
+                            // b.bind(this.host, this.port);
+                            // b.bind(this.host, this.sslPort);
+                            return b;
+                        });
             })
             .route(httpServerRoutesConsumer)
             // .host(this.host)
@@ -190,33 +194,33 @@ public class ReactorGuiceServer {
             .wiretap(true)
             .bindNow();
 
-        if (sslContext!=null) {
-            DisposableServer sslDisposableServer = HttpServer.create()
-                    .tcpConfiguration(tcpServer -> {
-                        if (sslContext!=null) {
-                            return tcpServer.option(ChannelOption.SO_KEEPALIVE, true)
-                                    .secure(s -> s.sslContext(sslContext))
-                                    .host(this.host)
-                                    .port(this.sslPort);
-                        }
-                        return tcpServer;
-                    })
-                    .route(httpServerRoutesConsumer)
-                    // .host(this.host)
-                    // .port(this.port)
-                    .wiretap(true)
-                    .bindNow();
-
-            Channel ch80 = disposableServer.channel().ss;
-            Channel ch443 = sslDisposableServer.channel();
-
-            ch80.closeFuture().sync();
-            ch443.closeFuture().sync();
-        }
+//        if (sslContext!=null) {
+//            DisposableServer sslDisposableServer = HttpServer.create()
+//                    .tcpConfiguration(tcpServer -> {
+//                        if (sslContext!=null) {
+//                            return tcpServer.option(ChannelOption.SO_KEEPALIVE, true)
+//                                    .secure(s -> s.sslContext(sslContext))
+//                                    .host(this.host)
+//                                    .port(this.sslPort);
+//                        }
+//                        return tcpServer;
+//                    })
+//                    .route(httpServerRoutesConsumer)
+//                    // .host(this.host)
+//                    // .port(this.port)
+//                    .wiretap(true)
+//                    .bindNow();
+//
+//            Channel ch80 = disposableServer.channel().ss;
+//            Channel ch443 = sslDisposableServer.channel();
+//
+//            ch80.closeFuture().sync();
+//            ch443.closeFuture().sync();
+//        }
 
         System.out.printf("\n>>> KReactor Server Running http://%s:%d/ ... \n\n", this.host, this.port);
 
-        // disposableServer.onDispose(sslDisposableServer.onDispose()).block();
+        disposableServer.onDispose().block();
     }
 
     private Consumer<HttpServerRoutes> routesBuilder() {
