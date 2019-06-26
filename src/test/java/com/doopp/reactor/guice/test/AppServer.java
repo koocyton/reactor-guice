@@ -32,7 +32,7 @@ import java.util.Properties;
 public class AppServer {
 
     @Test
-    public void testServer() throws IOException, CertificateException {
+    public void testServer() throws IOException, InterruptedException {
 
         Properties properties = new Properties();
         // properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
@@ -41,7 +41,12 @@ public class AppServer {
 
 
         String host = properties.getProperty("server.host", "127.0.0.1");
-        int port = Integer.valueOf(properties.getProperty("server.port", "8081"));
+        int port = Integer.valueOf(properties.getProperty("server.port", "8083"));
+        int sslPort = Integer.valueOf(properties.getProperty("server.sslPort", "8084"));
+
+        String jksFile = properties.getProperty("server.jks.file", "127.0.0.1");
+        String jksPassword = properties.getProperty("server.jks.password", "");
+        String jksSecret = properties.getProperty("server.jks.secret", "");
 
         System.out.println(">>> http://" + host + ":" + port + "/");
         System.out.println(">>> http://" + host + ":" + port + "/kreactor/test/json");
@@ -51,9 +56,10 @@ public class AppServer {
         System.out.println(">>> http://" + host + ":" + port + "/kreactor/test/redirect");
         System.out.println(">>> http://" + host + ":" + port + "/kreactor/test/params\n");
 
+        String jksFilePath = getClass().getResource("/"+jksFile).getPath();
 
         ReactorGuiceServer.create()
-            .bind(host, port)
+            .bind(host, port, sslPort)
             .createInjector(
                 binder -> Names.bindProperties(binder, properties),
                 new Module()
@@ -64,6 +70,7 @@ public class AppServer {
             // .setTemplateDelegate(new ThymeleafTemplateDelegate())
             .basePackages("com.doopp.reactor.guice.test")
             .addFilter("/", TestFilter.class)
+            .setHttps(new File(jksFilePath), jksPassword, jksSecret)
             .printError(true)
             // .crossOrigin(true)
             .launch();

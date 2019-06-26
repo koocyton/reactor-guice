@@ -9,6 +9,7 @@ import com.doopp.reactor.guice.websocket.WebSocketServerHandle;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
@@ -27,6 +28,8 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.ws.rs.*;
 import javax.ws.rs.Path;
 import javax.ws.rs.core.MediaType;
+import java.io.File;
+import java.io.FileInputStream;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.nio.file.*;
@@ -41,7 +44,9 @@ public class ReactorGuiceServer {
 
     private String host = "127.0.0.1";
 
-    private int port = 8081;
+    private int port = 8083;
+
+    private int sslPort = 8084;
 
     final private String version = "0.12.2";
 
@@ -70,6 +75,8 @@ public class ReactorGuiceServer {
 
     static final Set<String> classNames = new HashSet<>();
 
+    private SslContext sslContext = null;
+
     private static Map<String, FileSystem> jarPathFS = new HashMap<>();
 
     public static ReactorGuiceServer create() {
@@ -79,6 +86,13 @@ public class ReactorGuiceServer {
     public ReactorGuiceServer bind(String host, int port) {
         this.host = host;
         this.port = port;
+        return this;
+    }
+
+    public ReactorGuiceServer bind(String host, int port, int sslPort) {
+        this.host = host;
+        this.port = port;
+        this.sslPort = sslPort;
         return this;
     }
 
@@ -132,22 +146,28 @@ public class ReactorGuiceServer {
         return this;
     }
 
-    public ReactorGuiceServer openHttps (boolean crossOrigin) {
+    public ReactorGuiceServer setHttps (File jksFile, String jksPassword, String jksSecret) {
 
-        // ssl
-        KeyStore keyStore = KeyStore.getInstance("JKS");
-        keyStore.load(jksFile.getInputStream(), this.jksPassword.toCharArray());
-        KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-        keyManagerFactory.init(keyStore, this.jksSecret.toCharArray());
-        SslContext sslContext = SslContextBuilder.forServer(keyManagerFactory).build();
+        try {
+            // ssl
+            KeyStore keyStore = KeyStore.getInstance("JKS");
+            keyStore.load(new FileInputStream(jksFile), jksPassword.toCharArray());
+            KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+            keyManagerFactory.init(keyStore, jksSecret.toCharArray());
+            sslContext = SslContextBuilder.forServer(keyManagerFactory).build();
+        }
+        catch(Exception e) {
+            e.printStackTrace();
+            sslContext = null;
+        }
 
-        SelfSignedCertificate cert = new SelfSignedCertificate();
-        SslContextBuilder serverOptions = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
+        // SelfSignedCertificate cert = new SelfSignedCertificate();
+        // SslContextBuilder serverOptions = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
 
         return this;
     }
 
-    public void launch() throws CertificateException {
+    public void launch() throws InterruptedException {
 
         // 如果 injector 没有设定，就使用自动扫描的注入
         if (this.injector==null) {
@@ -155,21 +175,48 @@ public class ReactorGuiceServer {
             this.injector = Guice.createInjector(modules);
         }
 
+        Consumer<HttpServerRoutes> httpServerRoutesConsumer = this.routesBuilder();
+
         // 启动服务
         DisposableServer disposableServer = HttpServer.create()
-            .tcpConfiguration(tcpServer ->
-                tcpServer.option(ChannelOption.SO_KEEPALIVE, true)
-                    .secure(s->s.sslContext(serverOptions))
-            )
-            .route(this.routesBuilder())
-            .host(this.host)
-            .port(this.port)
+            .tcpConfiguration(tcpServer -> {
+                return tcpServer.option(ChannelOption.SO_KEEPALIVE, true)
+                        .host(this.host)
+                        .port(this.port);
+            })
+            .route(httpServerRoutesConsumer)
+            // .host(this.host)
+            // .port(this.port)
             .wiretap(true)
             .bindNow();
 
+        if (sslContext!=null) {
+            DisposableServer sslDisposableServer = HttpServer.create()
+                    .tcpConfiguration(tcpServer -> {
+                        if (sslContext!=null) {
+                            return tcpServer.option(ChannelOption.SO_KEEPALIVE, true)
+                                    .secure(s -> s.sslContext(sslContext))
+                                    .host(this.host)
+                                    .port(this.sslPort);
+                        }
+                        return tcpServer;
+                    })
+                    .route(httpServerRoutesConsumer)
+                    // .host(this.host)
+                    // .port(this.port)
+                    .wiretap(true)
+                    .bindNow();
+
+            Channel ch80 = disposableServer.channel().ss;
+            Channel ch443 = sslDisposableServer.channel();
+
+            ch80.closeFuture().sync();
+            ch443.closeFuture().sync();
+        }
+
         System.out.printf("\n>>> KReactor Server Running http://%s:%d/ ... \n\n", this.host, this.port);
 
-        disposableServer.onDispose().block();
+        // disposableServer.onDispose(sslDisposableServer.onDispose()).block();
     }
 
     private Consumer<HttpServerRoutes> routesBuilder() {

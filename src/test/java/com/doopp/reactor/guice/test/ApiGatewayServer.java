@@ -17,7 +17,7 @@ import java.util.Properties;
 public class ApiGatewayServer {
 
     @Test
-    public void testApiGatewayModel() throws IOException, CertificateException {
+    public void testApiGatewayModel() throws IOException, InterruptedException {
 
         Properties properties = new Properties();
         properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
