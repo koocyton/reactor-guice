@@ -23,19 +23,15 @@ import reactor.core.scheduler.Schedulers;
 import reactor.netty.DisposableServer;
 import reactor.netty.http.server.*;
 
-import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
 import javax.ws.rs.*;
 import javax.ws.rs.Path;
 import javax.ws.rs.core.MediaType;
-import java.io.FileInputStream;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.security.KeyStore;
-import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.util.*;
 import java.util.function.Consumer;
@@ -136,6 +132,21 @@ public class ReactorGuiceServer {
         return this;
     }
 
+    public ReactorGuiceServer openHttps (boolean crossOrigin) {
+
+        // ssl
+        KeyStore keyStore = KeyStore.getInstance("JKS");
+        keyStore.load(jksFile.getInputStream(), this.jksPassword.toCharArray());
+        KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+        keyManagerFactory.init(keyStore, this.jksSecret.toCharArray());
+        SslContext sslContext = SslContextBuilder.forServer(keyManagerFactory).build();
+
+        SelfSignedCertificate cert = new SelfSignedCertificate();
+        SslContextBuilder serverOptions = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
+
+        return this;
+    }
+
     public void launch() throws CertificateException {
 
         // 如果 injector 没有设定，就使用自动扫描的注入
@@ -143,16 +154,6 @@ public class ReactorGuiceServer {
             modules.add(new AutoImportModule());
             this.injector = Guice.createInjector(modules);
         }
-
-        // ssl
-//        KeyStore keyStore = KeyStore.getInstance("JKS");
-//        keyStore.load(jksFile.getInputStream(), this.jksPassword.toCharArray());
-//        KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-//        keyManagerFactory.init(keyStore, this.jksSecret.toCharArray());
-//        SslContext sslContext = SslContextBuilder.forServer(keyManagerFactory).build();
-
-        SelfSignedCertificate cert = new SelfSignedCertificate();
-        SslContextBuilder serverOptions = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
 
         // 启动服务
         DisposableServer disposableServer = HttpServer.create()
