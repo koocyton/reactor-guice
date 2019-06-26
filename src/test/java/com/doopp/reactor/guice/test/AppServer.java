@@ -35,8 +35,8 @@ public class AppServer {
     public void testServer() throws IOException, InterruptedException {
 
         Properties properties = new Properties();
-        // properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
-        properties.load(new FileInputStream("/Developer/Project/reactor-guice/application.properties"));
+        properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
+        // properties.load(new FileInputStream("/Developer/Project/reactor-guice/application.properties"));
 
 
 
@@ -56,7 +56,7 @@ public class AppServer {
         System.out.println(">>> http://" + host + ":" + port + "/kreactor/test/redirect");
         System.out.println(">>> http://" + host + ":" + port + "/kreactor/test/params\n");
 
-        String jksFilePath = getClass().getResource("/"+jksFile).getPath();
+        String jksFilePath = null;//getClass().getResource("/"+jksFile).getPath();
 
         ReactorGuiceServer.create()
             .bind(host, port, sslPort)
@@ -70,7 +70,8 @@ public class AppServer {
             // .setTemplateDelegate(new ThymeleafTemplateDelegate())
             .basePackages("com.doopp.reactor.guice.test")
             .addFilter("/", TestFilter.class)
-            .setHttps(new File(jksFilePath), jksPassword, jksSecret)
+            // .setHttps(new File(jksFilePath), jksPassword, jksSecret)
+            .setTestHttps()
             .printError(true)
             // .crossOrigin(true)
             .launch();

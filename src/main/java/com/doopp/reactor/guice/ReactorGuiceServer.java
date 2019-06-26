@@ -167,7 +167,26 @@ public class ReactorGuiceServer {
         return this;
     }
 
-    public void launch() throws InterruptedException {
+    public ReactorGuiceServer setTestHttps () {
+
+        try {
+            SelfSignedCertificate cert = new SelfSignedCertificate();
+            SslContextBuilder serverOptions = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
+            sslContext = serverOptions.build();
+
+        }
+        catch(Exception e) {
+            e.printStackTrace();
+            sslContext = null;
+        }
+
+        // SelfSignedCertificate cert = new SelfSignedCertificate();
+        // SslContextBuilder serverOptions = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
+
+        return this;
+    }
+
+    public void launch() {
 
         // 如果 injector 没有设定，就使用自动扫描的注入
         if (this.injector==null) {
@@ -181,12 +200,10 @@ public class ReactorGuiceServer {
         DisposableServer disposableServer = HttpServer.create()
             .tcpConfiguration(tcpServer -> {
                 return tcpServer.option(ChannelOption.SO_KEEPALIVE, true)
-                        .secure(s -> s.sslContext(sslContext))
-                        .bootstrap(b->{
-                            // b.bind(this.host, this.port);
-                            // b.bind(this.host, this.sslPort);
-                            return b;
-                        });
+                        // .secure(s -> s.sslContext(sslContext))
+                        .option(ChannelOption.SO_BACKLOG, 128)
+                        .host(this.host)
+                        .port(this.port);
             })
             .route(httpServerRoutesConsumer)
             // .host(this.host)
