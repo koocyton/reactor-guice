@@ -11,7 +11,9 @@ import io.netty.handler.codec.http.*;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.multipart.*;
 import io.netty.util.CharsetUtil;
+import org.reactivestreams.Subscription;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.http.server.HttpServerResponse;
 
@@ -25,8 +27,6 @@ import java.lang.reflect.Parameter;
 import java.util.*;
 
 public class HandlePublisher {
-
-    private static String ProtobufMediaType = "application/x-protobuf";
 
     private HttpMessageConverter httpMessageConverter;
 
@@ -97,31 +97,29 @@ public class HandlePublisher {
         // get results
         this.queryParams(request, questParams);
 
+        Mono<Object[]> objectMono;
+
         if (request.method() == HttpMethod.POST || request.method() == HttpMethod.PUT || request.method() == HttpMethod.DELETE) {
-            return request.receive()
+            objectMono = request.receive()
                 .aggregate()
                 .flatMap(byteBuf -> {
-                    try {
-                        this.formParams(request, byteBuf, formParams, fileParams);
-                        Object result = method.invoke(handleObject, methodParams(method,
-                                request,
-                                response,
-                                requestAttribute,
-                                modelMap,
-                                byteBuf,
-                                questParams,
-                                formParams,
-                                fileParams
-                        ));
-                        return (result instanceof Mono<?>) ? (Mono<?>) result : Mono.just(result);
-                    } catch (Exception e) {
-                        return Mono.error(e);
-                    }
+                    this.formParams(request, byteBuf, formParams, fileParams);
+                    return methodParams(
+                            method,
+                            request,
+                            response,
+                            requestAttribute,
+                            modelMap,
+                            byteBuf,
+                            questParams,
+                            formParams,
+                            fileParams
+                    );
                 });
         } else {
-            try {
                 this.formParams(request, null, formParams, fileParams);
-                Object result = method.invoke(handleObject, methodParams(method,
+                objectMono = methodParams(
+                        method,
                         request,
                         response,
                         requestAttribute,
@@ -130,12 +128,16 @@ public class HandlePublisher {
                         questParams,
                         formParams,
                         fileParams
-                ));
+                );
+        }
+        return objectMono.flatMap(oo -> {
+            try {
+                Object result = method.invoke(handleObject, oo);
                 return (result instanceof Mono<?>) ? (Mono<?>) result : Mono.just(result);
             } catch (Exception e) {
                 return Mono.error(e);
             }
-        }
+        });
     }
 
     public String methodProductsValue(Method method) {
@@ -150,7 +152,7 @@ public class HandlePublisher {
         return contentType;
     }
 
-    private Object[] methodParams(Method method,
+    private Mono<Object[]> methodParams(Method method,
                                   HttpServerRequest request,
                                   HttpServerResponse response,
                                   com.doopp.reactor.guice.RequestAttribute requestAttribute,
@@ -158,11 +160,12 @@ public class HandlePublisher {
                                   ByteBuf content,
                                   Map<String, List<String>> questParams,
                                   Map<String, List<String>> formParams,
-                                  Map<String, List<MemoryFileUpload>> fileParams
-    ) throws IllegalAccessException, InstantiationException, InvocationTargetException, IOException {
+                                  Map<String, List<MemoryFileUpload>> fileParams) {
 
         // values of method parameters
         ArrayList<Object> objectList = new ArrayList<>();
+
+        String ProtobufMediaType = "application/x-protobuf";
 
         // is a json request
         String requestContentType = "";
@@ -233,7 +236,12 @@ public class HandlePublisher {
             else if (parameter.getAnnotation(FileParam.class) != null) {
                 String annotationKey = parameter.getAnnotation(FileParam.class).value();
                 String annotationPath = parameter.getAnnotation(FileParam.class).path();
-                objectList.add(classCastFileUploadValue(fileParams.get(annotationKey), annotationPath, parameterClazz));
+                try {
+                    objectList.add(classCastFileUploadValue(fileParams.get(annotationKey), annotationPath, parameterClazz));
+                }
+                catch(IOException e) {
+                    return Mono.error(e);
+                }
             }
             // BeanParam
             else if (parameter.getAnnotation(BeanParam.class) != null) {
@@ -247,17 +255,22 @@ public class HandlePublisher {
                 }
                 // default is form request
                 else {
-                    objectList.add(formBeanParam(
-                        request,
-                        response,
-                        requestAttribute,
-                        modelMap,
-                        content,
-                        questParams,
-                        formParams,
-                        fileParams,
-                        parameterClazz
-                    ));
+                    try {
+                        objectList.add(formBeanParam(
+                                request,
+                                response,
+                                requestAttribute,
+                                modelMap,
+                                content,
+                                questParams,
+                                formParams,
+                                fileParams,
+                                parameterClazz
+                        ));
+                    }
+                    catch(IllegalAccessException | InstantiationException | InvocationTargetException e) {
+                        return Mono.error(e);
+                    }
                 }
             }
             // default
@@ -265,7 +278,7 @@ public class HandlePublisher {
                 objectList.add(parameterClazz.cast(null));
             }
         }
-        return objectList.toArray();
+        return Mono.just(objectList.toArray());
     }
 
     private Object jsonBeanParam(ByteBuf content, Class<?> parameterClazz) {
@@ -351,11 +364,11 @@ public class HandlePublisher {
             String fileName = fileNameSplit.length<=1
                 ? UUID.randomUUID().toString()
                 : UUID.randomUUID().toString() + "." + fileNameSplit[fileNameSplit.length-1];
-            File file = new File(path + "/" + fileName);
-            try (FileOutputStream fs = new FileOutputStream(file)) {
-                fs.write(value.get(0).get());
-            }
-            return clazz.cast(file);
+
+            return clazz.cast(saveFile(
+                    new File(path + "/" + fileName),
+                    value.get(0).get()
+            ));
         }
         // more
         else if (clazz == File[].class) {
@@ -366,9 +379,7 @@ public class HandlePublisher {
                     ? UUID.randomUUID().toString()
                     : UUID.randomUUID().toString() + "." + fileNameSplit[fileNameSplit.length-1];
                 files.add(ii, new File(path + "/" + fileName));
-                try (FileOutputStream fs = new FileOutputStream(files.get(ii))) {
-                    fs.write(value.get(ii).get());
-                }
+                saveFile(files.get(ii), value.get(ii).get());
             }
             return clazz.cast(files.toArray(new File[0]));
         }
@@ -402,6 +413,17 @@ public class HandlePublisher {
         } else {
             return clazz.cast(null);
         }
+    }
+
+    private File saveFile(File file, byte[] bytes) {
+        Mono.fromCallable(()->{
+            RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw");
+            randomAccessFile.seek(0);
+            randomAccessFile.write(bytes);
+            randomAccessFile.close();
+            return file;
+        }).subscribeOn(Schedulers.elastic()).subscribe();
+        return file;
     }
 
     private <T> T classCastStringValue(List<String> value, Class<T> clazz) {
