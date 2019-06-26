@@ -365,10 +365,9 @@ public class HandlePublisher {
                 ? UUID.randomUUID().toString()
                 : UUID.randomUUID().toString() + "." + fileNameSplit[fileNameSplit.length-1];
 
-            return clazz.cast(saveFile(
-                    new File(path + "/" + fileName),
-                    value.get(0).get()
-            ));
+            File file = new File(path + "/" + fileName);
+            saveFile(file, value.get(0));
+            return clazz.cast(file);
         }
         // more
         else if (clazz == File[].class) {
@@ -379,7 +378,7 @@ public class HandlePublisher {
                     ? UUID.randomUUID().toString()
                     : UUID.randomUUID().toString() + "." + fileNameSplit[fileNameSplit.length-1];
                 files.add(ii, new File(path + "/" + fileName));
-                saveFile(files.get(ii), value.get(ii).get());
+                saveFile(files.get(ii), value.get(ii));
             }
             return clazz.cast(files.toArray(new File[0]));
         }
@@ -415,15 +414,12 @@ public class HandlePublisher {
         }
     }
 
-    private File saveFile(File file, byte[] bytes) {
-        Mono.fromCallable(()->{
-            RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw");
+    private void saveFile(File file, FileUpload fileUpload) {
+        try (RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw")) {
             randomAccessFile.seek(0);
-            randomAccessFile.write(bytes);
-            randomAccessFile.close();
-            return file;
-        }).subscribeOn(Schedulers.elastic()).subscribe();
-        return file;
+            randomAccessFile.write(fileUpload.get());
+        }
+        catch(Exception ignored) {}
     }
 
     private <T> T classCastStringValue(List<String> value, Class<T> clazz) {
