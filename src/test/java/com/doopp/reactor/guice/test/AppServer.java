@@ -109,37 +109,42 @@ public class AppServer {
 
         ByteBuf buf = Unpooled.wrappedBuffer(builder.build().toByteArray()).retain();
 
-        String hhe = HttpClient.create()
-            .headers(headers -> {
-                headers.add(HttpHeaderNames.CONTENT_TYPE, "application/x-protobuf");
-            })
-            .post()
-            .uri("http://127.0.0.1:8083/kreactor/test/proto-post-bean")
-            .send(Flux.just(buf))
-            .responseSingle((res, content) -> content)
-            .map(byteBuf -> byteBuf.toString(CharsetUtil.UTF_8))
-            .block();
+        for(int ii=0; ii<100000; ii++) {
+            String hhe = HttpClient.create()
+                .headers(headers -> {
+                    headers.add(HttpHeaderNames.CONTENT_TYPE, "application/x-protobuf");
+                })
+                .post()
+                .uri("http://127.0.0.1:8083/kreactor/test/proto-post-bean")
+                .send(Flux.just(buf.retain()))
+                .responseSingle((res, content) -> content)
+                .map(byteBuf -> byteBuf.toString(CharsetUtil.UTF_8))
+                .block();
 
-        System.out.println(hhe);
+            // System.out.println("" + ii + " : " + hhe);
+        }
+        System.out.println("ok");
     }
 
     @Test
     public void testPostJsonBean() {
 
-        ByteBuf buf = Unpooled.wrappedBuffer("{\"id\":\"123123121312312\", \"name\":\"wuyi\"}".getBytes()).retain();
+        for(int ii=0; ii<10000; ii++) {
+            ByteBuf buf = Unpooled.wrappedBuffer("{\"id\":\"123123121312312\", \"name\":\"wuyi\"}".getBytes()).retain();
 
-        String hhe = HttpClient.create()
-            .headers(headers -> {
-                headers.add(HttpHeaderNames.CONTENT_TYPE, MediaType.APPLICATION_JSON);
-            })
-            .post()
-            .uri("http://127.0.0.1:8083/kreactor/test/post-bean")
-            .send(Flux.just(buf))
-            .responseSingle((res, content) -> content)
-            .map(byteBuf -> byteBuf.toString(CharsetUtil.UTF_8))
-            .block();
+            String hhe = HttpClient.create()
+                .headers(headers -> {
+                    headers.add(HttpHeaderNames.CONTENT_TYPE, MediaType.APPLICATION_JSON);
+                })
+                .post()
+                .uri("http://127.0.0.1:8083/kreactor/test/post-bean")
+                .send(Flux.just(buf))
+                .responseSingle((res, content) -> content)
+                .map(byteBuf -> byteBuf.toString(CharsetUtil.UTF_8))
+                .block();
 
-        System.out.println(hhe);
+            System.out.println("" + ii + " : " + hhe);
+        }
     }
 
     @Test
@@ -161,23 +166,24 @@ public class AppServer {
 
     @Test
     public void testFileUpload() {
+        for(int ii=0; ii<10000; ii++) {
+            String hhe = HttpClient.create()
+                .post()
+                .uri("http://127.0.0.1:8083/kreactor/test/post-bean")
+                .sendForm((req, form) -> form.multipart(true)
+                    .attr("id", "123123121312312")
+                    .attr("account", "account")
+                    .attr("password", "password")
+                    .attr("name", "name")
+                    .file("image", new File("C:\\Users\\koocyton\\Pictures\\cloud.jpg"))
+                    .file("image", new File("C:\\Users\\koocyton\\Pictures\\st.jpg"))
+                )
+                .responseSingle((res, content) -> content)
+                .map(byteBuf -> byteBuf.toString(CharsetUtil.UTF_8))
+                .block();
 
-        String hhe = HttpClient.create()
-            .post()
-            .uri("http://127.0.0.1:8083/kreactor/test/post-bean")
-            .sendForm((req, form) -> form.multipart(true)
-                .attr("id", "123123121312312")
-                .attr("account", "account")
-                .attr("password", "password")
-                .attr("name", "name")
-                .file("image", new File("C:\\Users\\koocyton\\Pictures\\cloud.jpg"))
-                .file("image", new File("C:\\Users\\koocyton\\Pictures\\st.jpg"))
-            )
-            .responseSingle((res, content) -> content)
-            .map(byteBuf -> byteBuf.toString(CharsetUtil.UTF_8))
-            .block();
-
-        System.out.println(hhe);
+            System.out.println("" + ii + " : " + hhe);
+        }
     }
 
     @Test
