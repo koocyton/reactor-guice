@@ -9,12 +9,10 @@ import com.doopp.reactor.guice.websocket.WebSocketServerHandle;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.ssl.JdkSslContext;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
@@ -35,7 +33,6 @@ import java.net.URL;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.security.KeyStore;
-import java.security.cert.CertificateException;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -48,7 +45,7 @@ public class ReactorGuiceServer {
 
     private int sslPort = 8084;
 
-    final private String version = "0.12.2";
+    final private String version = "0.12.3";
 
     // handle
     private HandlePublisher handlePublisher = new HandlePublisher();
