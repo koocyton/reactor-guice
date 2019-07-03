@@ -22,7 +22,12 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousFileChannel;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class HandlePublisher {
 
@@ -60,7 +65,7 @@ public class HandlePublisher {
 
                 // byte[] binary
                 if (result instanceof byte[]) {
-                    return Unpooled.wrappedBuffer((byte[]) result).retain();
+                    return Unpooled.wrappedBuffer((byte[]) result);
                 }
                 // ByteBuf binary
                 else if (result instanceof ByteBuf) {
@@ -382,11 +387,13 @@ public class HandlePublisher {
         }
         // one
         else if (clazz == FileUpload.class) {
-            return clazz.cast(value.get(0));
+            return clazz.cast(value.get(0).retain());
         }
         // more
         else if (clazz == FileUpload[].class) {
-            return clazz.cast(value.toArray(new FileUpload[0]));
+            return clazz.cast(
+                    value.stream().map(MemoryFileUpload::retain).toArray(FileUpload[]::new)
+            );
         }
         // one
         else if (clazz == MemoryFileUpload.class) {
@@ -418,6 +425,24 @@ public class HandlePublisher {
             randomAccessFile.write(fileUpload.get());
         }
         catch(Exception ignored) {}
+
+//        AsynchronousFileChannel channel = null;
+//        try {
+//            channel = AsynchronousFileChannel.open(Paths.get(file.getPath()), StandardOpenOption.WRITE);
+//            channel.write(ByteBuffer.wrap(fileUpload.get()), 0L);
+//        }
+//        catch(IOException e) {
+//            e.printStackTrace();
+//        }
+//
+//        try {
+//            if (channel!=null && channel.isOpen()) {
+//                channel.close();
+//            }
+//        }
+//        catch(IOException e) {
+//            e.printStackTrace();
+//        }
     }
 
     private <T> T classCastStringValue(List<String> value, Class<T> clazz) {
@@ -496,37 +521,23 @@ public class HandlePublisher {
             // POST Params
             FullHttpRequest dhr = new DefaultFullHttpRequest(request.version(), request.method(), request.uri(), content, request.requestHeaders(), EmptyHttpHeaders.INSTANCE);
             HttpPostRequestDecoder postDecoder = new HttpPostRequestDecoder(new DefaultHttpDataFactory(false), dhr, CharsetUtil.UTF_8);
-            List<InterfaceHttpData> postData = postDecoder.getBodyHttpDatas();
-            for (InterfaceHttpData data : postData) {
+            // loop data
+            for (InterfaceHttpData data : postDecoder.getBodyHttpDatas()) {
+                String name = data.getName();
                 // 一般 post 内容
                 if (data.getHttpDataType() == InterfaceHttpData.HttpDataType.Attribute) {
-                    MemoryAttribute attribute = (MemoryAttribute) data;
-                    // System.out.println(data);
-                    // formParams.put(attribute.getName(), attribute.getValue());
-                    List<String> formParam = formParams.get(attribute.getName());
-                    if (formParam == null) {
-                        formParam = new ArrayList<>();
-                        formParam.add(attribute.getValue());
-                        formParams.put(attribute.getName(), formParam);
-                    } else {
-                        formParam.add(attribute.getValue());
-                    }
+                    formParams.computeIfAbsent(name, k -> new ArrayList<>());
+                    formParams.get(name).add(((MemoryAttribute) data).getValue());
                 }
                 // 上传文件的内容
                 else if (data.getHttpDataType() == InterfaceHttpData.HttpDataType.FileUpload) {
-                    MemoryFileUpload fileUpload = (MemoryFileUpload) data;
-                    // fileParams.put(fileUpload.getName(), fileUpload);
-                    // fileParams.put(fileUpload.getName(), null);
-                    List<MemoryFileUpload> fileParam = fileParams.get(fileUpload.getName());
-                    if (fileParam == null) {
-                        fileParam = new ArrayList<>();
-                        fileParam.add(fileUpload);
-                        fileParams.put(fileUpload.getName(), fileParam);
-                    } else {
-                        fileParam.add(fileUpload);
-                    }
+                    fileParams.computeIfAbsent(name, k -> new ArrayList<>());
+                    fileParams.get(name).add((MemoryFileUpload) data);
                 }
             }
+            postDecoder.destroy();
+            dhr.release();
+            // content.release();
         }
     }
 }

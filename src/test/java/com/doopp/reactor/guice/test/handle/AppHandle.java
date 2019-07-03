@@ -108,7 +108,8 @@ public class AppHandle {
 
     @POST
     @Path("/test/post-bean")
-    public Mono<User> testPostBean(@BeanParam User user, @FileParam(value="image", path = "C:\\Users\\koocyton\\Desktop\\tmp") File[] file) {
+    public Mono<User> testPostBean(@BeanParam User user, @FileParam(value="image", path = "/tmp/bb") File[] files) {
+        System.out.println(files[0].getPath());
         return Mono.just(user);
     }
 
