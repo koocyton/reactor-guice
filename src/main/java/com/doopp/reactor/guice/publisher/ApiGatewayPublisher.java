@@ -129,13 +129,13 @@ public class ApiGatewayPublisher {
         private Map<String, FluxProcessor<WebSocketFrame, WebSocketFrame>> messages = new HashMap<>();
 
         @Override
-        public void onConnect(Channel channel) {
+        public Mono<Void> onConnect(Channel channel) {
 
             RequestAttribute requestAttribute = channel.attr(RequestAttribute.REQUEST_ATTRIBUTE).get();
             String wsUrl = requestAttribute.getAttribute("websocket-inside-url", String.class);
 
             if (wsUrl==null) {
-                this.onClose(null, channel);
+                return this.onClose(null, channel);
             }
 
             String channelId = channel.id().asLongText();
@@ -147,7 +147,7 @@ public class ApiGatewayPublisher {
                 .websocket()
                 .uri(wsUrl));
 
-            clients.get(channelId).handle((in, out) -> out
+            return clients.get(channelId).handle((in, out) -> out
                 .withConnection(con->{
                     // channel
                     Channel ch = con.channel();
@@ -169,13 +169,14 @@ public class ApiGatewayPublisher {
                 })
                 .options(NettyPipeline.SendOptions::flushOnEach)
                 .sendObject(messages.get(channelId))
-            ).subscribe();
+            ).then();
         }
 
         @Override
-        public void handleEvent(WebSocketFrame frame, Channel channel) {
+        public Mono<Void> handleEvent(WebSocketFrame frame, Channel channel) {
             String channelId = channel.id().asLongText();
             messages.get(channelId).onNext(frame.retain());
+            return Mono.empty();
         }
     }
 }

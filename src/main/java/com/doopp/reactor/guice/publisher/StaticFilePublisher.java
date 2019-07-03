@@ -19,8 +19,9 @@ public class StaticFilePublisher {
                 : "/public" + req.uri();
 
         return ReactorGuiceServer.classResourcePath(resourceUri)
-                .flatMap(path->this.setHeader(path, resp))
+                // .flatMap(path->this.setHeader(path, resp))
                 .flatMap(path -> {
+                    resp.header(HttpHeaderNames.CONTENT_TYPE, contentType(path.toString())+"; charset=UTF-8");
                     if (Files.isDirectory(path)) {
                         return resp.sendRedirect(req.uri() + "/");
                     }

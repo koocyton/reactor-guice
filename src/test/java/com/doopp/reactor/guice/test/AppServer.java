@@ -9,6 +9,7 @@ import com.google.inject.name.Names;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.util.CharsetUtil;
 import org.junit.Test;
@@ -24,22 +25,28 @@ import javax.ws.rs.core.MediaType;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.Properties;
 
 public class AppServer {
 
     @Test
-    public void testServer() throws IOException {
+    public void testServer() throws IOException, InterruptedException {
 
         Properties properties = new Properties();
-        properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
-        // properties.load(new FileInputStream("/Developer/Project/reactor-guice/application.properties"));
+        // properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
+        properties.load(new FileInputStream("/Developer/Project/reactor-guice/application.properties"));
 
 
 
         String host = properties.getProperty("server.host", "127.0.0.1");
-        int port = Integer.valueOf(properties.getProperty("server.port", "8081"));
+        int port = Integer.valueOf(properties.getProperty("server.port", "8083"));
+        int sslPort = Integer.valueOf(properties.getProperty("server.sslPort", "8084"));
+
+        String jksFile = properties.getProperty("server.jks.file", "127.0.0.1");
+        String jksPassword = properties.getProperty("server.jks.password", "");
+        String jksSecret = properties.getProperty("server.jks.secret", "");
 
         System.out.println(">>> http://" + host + ":" + port + "/");
         System.out.println(">>> http://" + host + ":" + port + "/kreactor/test/json");
@@ -49,9 +56,10 @@ public class AppServer {
         System.out.println(">>> http://" + host + ":" + port + "/kreactor/test/redirect");
         System.out.println(">>> http://" + host + ":" + port + "/kreactor/test/params\n");
 
+        String jksFilePath = null;//getClass().getResource("/"+jksFile).getPath();
 
         ReactorGuiceServer.create()
-            .bind(host, port)
+            .bind(host, port, sslPort)
             .createInjector(
                 binder -> Names.bindProperties(binder, properties),
                 new Module()
@@ -62,6 +70,8 @@ public class AppServer {
             // .setTemplateDelegate(new ThymeleafTemplateDelegate())
             .basePackages("com.doopp.reactor.guice.test")
             .addFilter("/", TestFilter.class)
+            // .setHttps(new File(jksFilePath), jksPassword, jksSecret)
+            .setTestHttps()
             .printError(true)
             // .crossOrigin(true)
             .launch();
@@ -99,37 +109,42 @@ public class AppServer {
 
         ByteBuf buf = Unpooled.wrappedBuffer(builder.build().toByteArray()).retain();
 
-        String hhe = HttpClient.create()
-            .headers(headers -> {
-                headers.add(HttpHeaderNames.CONTENT_TYPE, "application/x-protobuf");
-            })
-            .post()
-            .uri("http://127.0.0.1:8083/kreactor/test/proto-post-bean")
-            .send(Flux.just(buf))
-            .responseSingle((res, content) -> content)
-            .map(byteBuf -> byteBuf.toString(CharsetUtil.UTF_8))
-            .block();
+        for(int ii=0; ii<100000; ii++) {
+            String hhe = HttpClient.create()
+                .headers(headers -> {
+                    headers.add(HttpHeaderNames.CONTENT_TYPE, "application/x-protobuf");
+                })
+                .post()
+                .uri("http://127.0.0.1:8083/kreactor/test/proto-post-bean")
+                .send(Flux.just(buf.retain()))
+                .responseSingle((res, content) -> content)
+                .map(byteBuf -> byteBuf.toString(CharsetUtil.UTF_8))
+                .block();
 
-        System.out.println(hhe);
+            // System.out.println("" + ii + " : " + hhe);
+        }
+        System.out.println("ok");
     }
 
     @Test
     public void testPostJsonBean() {
 
-        ByteBuf buf = Unpooled.wrappedBuffer("{\"id\":\"123123121312312\", \"name\":\"wuyi\"}".getBytes()).retain();
+        for(int ii=0; ii<10000; ii++) {
+            ByteBuf buf = Unpooled.wrappedBuffer("{\"id\":\"123123121312312\", \"name\":\"wuyi\"}".getBytes()).retain();
 
-        String hhe = HttpClient.create()
-            .headers(headers -> {
-                headers.add(HttpHeaderNames.CONTENT_TYPE, MediaType.APPLICATION_JSON);
-            })
-            .post()
-            .uri("http://127.0.0.1:8083/kreactor/test/post-bean")
-            .send(Flux.just(buf))
-            .responseSingle((res, content) -> content)
-            .map(byteBuf -> byteBuf.toString(CharsetUtil.UTF_8))
-            .block();
+            String hhe = HttpClient.create()
+                .headers(headers -> {
+                    headers.add(HttpHeaderNames.CONTENT_TYPE, MediaType.APPLICATION_JSON);
+                })
+                .post()
+                .uri("http://127.0.0.1:8083/kreactor/test/post-bean")
+                .send(Flux.just(buf))
+                .responseSingle((res, content) -> content)
+                .map(byteBuf -> byteBuf.toString(CharsetUtil.UTF_8))
+                .block();
 
-        System.out.println(hhe);
+            System.out.println("" + ii + " : " + hhe);
+        }
     }
 
     @Test
@@ -151,23 +166,25 @@ public class AppServer {
 
     @Test
     public void testFileUpload() {
+        for(int ii=0; ii<1000000; ii++) {
+            String hhe = HttpClient.create()
+                .post()
+                .uri("http://127.0.0.1:8083/kreactor/test/post-bean")
+                .sendForm((req, form) -> form.multipart(true)
+                    .attr("id", "123123121312312")
+                    .attr("account", "account")
+                    .attr("password", "password")
+                    .attr("name", "name")
+                    // .file("image", new File("/Users/henry/Pictures/girl.jpg"))
+                    // .file("image", new File("C:\\Users\\koocyton\\Pictures\\cloud.jpg"))
+                    // .file("image", new File("C:\\Users\\koocyton\\Pictures\\st.jpg"))
+                )
+                .responseSingle((res, content) -> content)
+                .map(byteBuf -> byteBuf.toString(CharsetUtil.UTF_8))
+                .block();
 
-        String hhe = HttpClient.create()
-            .post()
-            .uri("http://127.0.0.1:8083/kreactor/test/post-bean")
-            .sendForm((req, form) -> form.multipart(true)
-                .attr("id", "123123121312312")
-                .attr("account", "account")
-                .attr("password", "password")
-                .attr("name", "name")
-                .file("image", new File("C:\\Users\\koocyton\\Pictures\\cloud.jpg"))
-                .file("image", new File("C:\\Users\\koocyton\\Pictures\\st.jpg"))
-            )
-            .responseSingle((res, content) -> content)
-            .map(byteBuf -> byteBuf.toString(CharsetUtil.UTF_8))
-            .block();
-
-        System.out.println(hhe);
+            System.out.println("" + ii + " : " + hhe);
+        }
     }
 
     @Test
@@ -192,8 +209,8 @@ public class AppServer {
 
     private static void testWebsocketClient() throws IOException {
         Properties properties = new Properties();
-        properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
-        // properties.load(new FileInputStream("/Developer/Project/reactor-guice/application.properties"));
+        // properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
+        properties.load(new FileInputStream("/Developer/Project/reactor-guice/application.properties"));
 
         int port = Integer.valueOf(properties.getProperty("server.port", "8081"));
 
@@ -207,12 +224,18 @@ public class AppServer {
             // .port(port)
             // .wiretap(true)
             .websocket()
-            .uri("ws://127.0.0.1:8083/kreactor-rr/ws")
+            .uri("ws://127.0.0.1:8083/kreactor/ws")
             .handle((in, out) ->
                 out.withConnection(conn -> {
                     in.aggregateFrames().receiveFrames().map(frames -> {
                         if (frames instanceof TextWebSocketFrame) {
                             System.out.println("Receive text message " + ((TextWebSocketFrame) frames).text());
+                        }
+                        else if (frames instanceof BinaryWebSocketFrame) {
+                            System.out.println("Receive binary message " + frames.content());
+                        }
+                        else {
+                            System.out.println("Receive normal message " + frames.content());
                         }
                         return Mono.empty();
                     })

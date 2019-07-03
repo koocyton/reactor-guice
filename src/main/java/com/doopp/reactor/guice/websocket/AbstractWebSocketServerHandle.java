@@ -1,78 +1,95 @@
 package com.doopp.reactor.guice.websocket;
 
 import com.doopp.reactor.guice.RequestAttribute;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http.websocketx.*;
+import reactor.core.publisher.Mono;
 
 public abstract class AbstractWebSocketServerHandle implements WebSocketServerHandle {
 
     @Override
-    public void onConnect(Channel channel) {
+    public Mono<Void> onConnect(Channel channel) {
         RequestAttribute requestAttribute = channel.attr(RequestAttribute.REQUEST_ATTRIBUTE).get();
+        return Mono.empty();
     }
 
     @Override
-    public void handleEvent(WebSocketFrame frame, Channel channel) {
+    public Mono<Void> onError(Channel channel, Throwable error) {
+        channel.writeAndFlush(new TextWebSocketFrame(error.getMessage()));
+        return this.onClose(null, channel);
+    }
+
+    @Override
+    public Mono<Void> handleEvent(WebSocketFrame frame, Channel channel) {
         try {
             if (frame instanceof TextWebSocketFrame) {
-                this.onTextMessage((TextWebSocketFrame) frame, channel);
+                return this.onTextMessage((TextWebSocketFrame) frame, channel);
             } else if (frame instanceof BinaryWebSocketFrame) {
-                this.onBinaryMessage((BinaryWebSocketFrame) frame, channel);
+                return this.onBinaryMessage((BinaryWebSocketFrame) frame, channel);
             } else if (frame instanceof PingWebSocketFrame) {
-                this.onPingMessage((PingWebSocketFrame) frame, channel);
+                return this.onPingMessage((PingWebSocketFrame) frame, channel);
             } else if (frame instanceof PongWebSocketFrame) {
-                this.onPongMessage((PongWebSocketFrame) frame, channel);
+                return this.onPongMessage((PongWebSocketFrame) frame, channel);
             } else if (frame instanceof CloseWebSocketFrame) {
-                this.onClose((CloseWebSocketFrame) frame, channel);
+                return this.onClose((CloseWebSocketFrame) frame, channel);
             }
         }
         catch (Exception e) {
-            this.onError(channel, e);
+            return this.onError(channel, e);
         }
+        return Mono.empty();
     }
 
     @Override
-    public void onClose(CloseWebSocketFrame frame, Channel channel) {
+    public Mono<Void> onClose(CloseWebSocketFrame frame, Channel channel) {
         if (channel.isOpen() && channel.isActive()) {
             channel.close();
         }
+        return Mono.empty();
     }
 
-    @Override
-    public void onError(Channel channel, Throwable error) {
-        channel.writeAndFlush(new TextWebSocketFrame(error.getMessage()));
-        this.onClose(null, channel);
-    }
-
-    protected void sendTextMessage(TextWebSocketFrame frame, Channel channel) {
-        channel.writeAndFlush(frame.retain());
-    }
-
-    protected void onTextMessage(TextWebSocketFrame frame, Channel channel) {
+    protected Mono<Void> onTextMessage(TextWebSocketFrame frame, Channel channel) {
         // channel.writeAndFlush(frame);
+        return Mono.empty();
     }
 
-    protected void sendBinaryMessage(BinaryWebSocketFrame frame, Channel channel) {
-        channel.writeAndFlush(frame.retain());
-    }
-
-    protected void onBinaryMessage(BinaryWebSocketFrame frame, Channel channel) {
+    protected Mono<Void> onBinaryMessage(BinaryWebSocketFrame frame, Channel channel) {
         // channel.writeAndFlush(frame);
+        return Mono.empty();
     }
 
-    protected void sendPingMessage(PingWebSocketFrame frame, Channel channel) {
-        channel.writeAndFlush(frame.retain());
+    protected Mono<Void> onPingMessage(PingWebSocketFrame frame, Channel channel) {
+        return this.sendPongMessage(channel);
     }
 
-    protected void onPingMessage(PingWebSocketFrame frame, Channel channel) {
-        this.sendPongMessage(new PongWebSocketFrame(), channel);
+    protected Mono<Void> onPongMessage(PongWebSocketFrame frame, Channel channel) {
+        return this.sendPingMessage(channel);
     }
 
-    protected void sendPongMessage(PongWebSocketFrame frame, Channel channel) {
-        channel.writeAndFlush(frame.retain());
+    final protected Mono<Void> sendTextMessage(String text, Channel channel) {
+        return sendMessage(new TextWebSocketFrame(text), channel);
     }
 
-    protected void onPongMessage(PongWebSocketFrame frame, Channel channel) {
-        this.sendPingMessage(new PingWebSocketFrame(), channel);
+    final protected Mono<Void> sendBinaryMessage(ByteBuf byteBuf, Channel channel) {
+        return sendMessage(new BinaryWebSocketFrame(byteBuf), channel);
+    }
+
+    final protected Mono<Void> sendBinaryMessage(byte[] bytes, Channel channel) {
+        return sendBinaryMessage(Unpooled.wrappedBuffer(bytes), channel);
+    }
+
+    final protected Mono<Void> sendPingMessage(Channel channel) {
+        return sendMessage(new PingWebSocketFrame(), channel);
+    }
+
+    final protected Mono<Void> sendPongMessage(Channel channel) {
+        return sendMessage(new PongWebSocketFrame(), channel);
+    }
+
+    private Mono<Void> sendMessage(WebSocketFrame frame, Channel channel) {
+        channel.writeAndFlush(frame);
+        return Mono.empty();
     }
 }
