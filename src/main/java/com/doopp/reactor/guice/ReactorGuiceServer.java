@@ -198,7 +198,7 @@ public class ReactorGuiceServer {
             .tcpConfiguration(tcpServer -> {
                 return tcpServer.option(ChannelOption.SO_KEEPALIVE, true)
                         // .secure(s -> s.sslContext(sslContext))
-                        .option(ChannelOption.SO_BACKLOG, 128)
+                        // .option(ChannelOption.SO_BACKLOG, 128)
                         .host(this.host)
                         .port(this.port);
             })
