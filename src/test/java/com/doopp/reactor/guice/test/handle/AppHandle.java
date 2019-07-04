@@ -114,6 +114,13 @@ public class AppHandle {
     }
 
     @POST
+    @Path("/test/json-bean")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Mono<User> testJsonBean(@BeanParam User user) {
+        return Mono.just(user);
+    }
+
+    @POST
     @Path("/test/proto-post-bean")
     public Mono<Hello> testPostBean(@BeanParam Hello hello) {
         return Mono.just(hello);

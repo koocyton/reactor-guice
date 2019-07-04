@@ -39,7 +39,8 @@ public class ApiGatewayPublisher {
 
         // System.out.println(req.uri() + "\n" + req.requestHeaders());
 
-        if (req.requestHeaders().get("upgrade")!=null && req.requestHeaders().get("upgrade").equals("websocket")) {
+        // if (req.requestHeaders().get("upgrade")!=null && req.requestHeaders().get("upgrade").equals("websocket")) {
+        if (req.isWebsocket()) {
             if (requestAttribute instanceof RequestAttribute) {
                 ((RequestAttribute) requestAttribute).setAttribute("websocket-inside-url", insideUrlPath);
             }

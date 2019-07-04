@@ -166,7 +166,7 @@ public class AppServer {
 
     @Test
     public void testFileUpload() {
-        for(int ii=0; ii<1000000; ii++) {
+        for(int ii=0; ii<100; ii++) {
             String hhe = HttpClient.create()
                 .post()
                 .uri("http://127.0.0.1:8083/kreactor/test/post-bean")
@@ -175,7 +175,7 @@ public class AppServer {
                     .attr("account", "account")
                     .attr("password", "password")
                     .attr("name", "name")
-                    // .file("image", new File("/Users/henry/Pictures/girl.jpg"))
+                    .file("image", new File("/Users/henry/Pictures/girl.jpg"))
                     // .file("image", new File("C:\\Users\\koocyton\\Pictures\\cloud.jpg"))
                     // .file("image", new File("C:\\Users\\koocyton\\Pictures\\st.jpg"))
                 )
