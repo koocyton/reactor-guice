@@ -4,7 +4,6 @@ import com.doopp.reactor.guice.ReactorGuiceServer;
 import com.doopp.reactor.guice.test.proto.hello.Hello;
 import com.doopp.reactor.guice.test.util.MyGsonHttpMessageConverter;
 import com.doopp.reactor.guice.view.FreemarkTemplateDelegate;
-import com.google.inject.*;
 import com.google.inject.name.Names;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -17,7 +16,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxProcessor;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.ReplayProcessor;
-import reactor.core.scheduler.Schedulers;
 import reactor.netty.NettyPipeline;
 import reactor.netty.http.client.HttpClient;
 
@@ -25,7 +23,6 @@ import javax.ws.rs.core.MediaType;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.Properties;
 
@@ -35,8 +32,8 @@ public class AppServer {
     public void testServer() throws IOException, InterruptedException {
 
         Properties properties = new Properties();
-        // properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
-        properties.load(new FileInputStream("/Developer/Project/reactor-guice/application.properties"));
+        properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
+        // properties.load(new FileInputStream("/Developer/Project/reactor-guice/application.properties"));
 
 
 
@@ -70,8 +67,10 @@ public class AppServer {
             // .setTemplateDelegate(new ThymeleafTemplateDelegate())
             .basePackages("com.doopp.reactor.guice.test")
             .addFilter("/", TestFilter.class)
+            .addResource("/static", "/public")
+            .addResource("/", "/public")
             // .setHttps(new File(jksFilePath), jksPassword, jksSecret)
-            .setTestHttps()
+            // .setTestHttps()
             .printError(true)
             // .crossOrigin(true)
             .launch();
@@ -175,8 +174,8 @@ public class AppServer {
                     .attr("account", "account")
                     .attr("password", "password")
                     .attr("name", "name")
-                    .file("image", new File("/Users/henry/Pictures/girl.jpg"))
-                    // .file("image", new File("C:\\Users\\koocyton\\Pictures\\cloud.jpg"))
+                    // .file("image", new File("/Users/henry/Pictures/girl.jpg"))
+                    .file("image", new File("C:\\Users\\koocyton\\Pictures\\cloud.jpg"))
                     // .file("image", new File("C:\\Users\\koocyton\\Pictures\\st.jpg"))
                 )
                 .responseSingle((res, content) -> content)

@@ -39,8 +39,10 @@ Reactor-guice 是一个基于 Google Guice 和 Reactor-netty 的 Reactor 微服�
        简化 websocket 的接口
        网关模式增加 websocket
 
-0.12.3 增加 https
+0.12.4 增加 https
+       静态文件目录可配置多个
        修复上传文件多次后，溢出的情况
+       修复内部错误，错误的做了 bytebuf.release()
 
 ```
 

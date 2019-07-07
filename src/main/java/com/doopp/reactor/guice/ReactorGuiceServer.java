@@ -45,10 +45,13 @@ public class ReactorGuiceServer {
 
     private int sslPort = 8084;
 
-    final private String version = "0.12.3";
+    final private String version = "0.12.4";
 
     // handle
     private HandlePublisher handlePublisher = new HandlePublisher();
+
+    // static file publisher
+    private StaticFilePublisher staticFilePublisher = new StaticFilePublisher();
 
     // websocket
     private WebsocketPublisher websocketPublisher = new WebsocketPublisher();
@@ -112,6 +115,11 @@ public class ReactorGuiceServer {
 
     public ReactorGuiceServer addFilter(String path, Class<? extends Filter> clazz) {
         this.filters.put(path, clazz);
+        return this;
+    }
+
+    public ReactorGuiceServer addResource(String uriBegin, String resourcePath) {
+        staticFilePublisher.addResourceLocations(uriBegin, resourcePath);
         return this;
     }
 
@@ -196,11 +204,20 @@ public class ReactorGuiceServer {
         // 启动服务
         DisposableServer disposableServer = HttpServer.create()
             .tcpConfiguration(tcpServer -> {
-                return tcpServer.option(ChannelOption.SO_KEEPALIVE, true)
+                if (sslContext==null) {
+                    return tcpServer.option(ChannelOption.SO_KEEPALIVE, true)
                         // .secure(s -> s.sslContext(sslContext))
                         // .option(ChannelOption.SO_BACKLOG, 128)
                         .host(this.host)
                         .port(this.port);
+                }
+                else {
+                    return tcpServer.option(ChannelOption.SO_KEEPALIVE, true)
+                        .secure(s -> s.sslContext(sslContext))
+                        // .option(ChannelOption.SO_BACKLOG, 128)
+                        .host(this.host)
+                        .port(this.sslPort);
+                }
             })
             .route(httpServerRoutesConsumer)
             // .host(this.host)
@@ -320,21 +337,20 @@ public class ReactorGuiceServer {
                 ApiGatewayPublisher apiGatewayPublisher = new ApiGatewayPublisher(this.apiGatewayDispatcher);
                 System.out.println("   Any /** →  /** <api gateway model>");
                 routes.route(apiGatewayPublisher::checkRequest, (req, resp) -> httpPublisher(req, resp, null, o ->
-                        apiGatewayPublisher.sendResponse(req, resp, websocketPublisher, o)
+                    apiGatewayPublisher.sendResponse(req, resp, websocketPublisher, o)
                 ));
             }
             // static server
             else {
-                StaticFilePublisher staticFilePublisher = new StaticFilePublisher();
                 System.out.println("   GET /** →  /public/* <static files>");
                 routes.route(req->true, (req, resp) -> httpPublisher(req, resp, null, o ->
-                    Mono.just(staticFilePublisher.sendFile(req, resp))
+                    staticFilePublisher.sendFile(req, resp)
                 ));
             }
         };
     }
 
-    private Publisher<Void> httpPublisher(HttpServerRequest req, HttpServerResponse resp, Method method, Function<Object, Mono<Object>> handle) {
+    private Publisher<Void> httpPublisher(HttpServerRequest req, HttpServerResponse resp, Method method, Function<Object, Mono<?>> handle) {
 
         // response header
         if (req.isKeepAlive()) {
@@ -576,6 +592,8 @@ public class ReactorGuiceServer {
                 return jarPathFS.get(jarPathInfo[0]).getPath(jarPathInfo[1]);
             }
             return Paths.get(resource.toURI());
-        }).subscribeOn(Schedulers.elastic());
+        })
+            .subscribeOn(Schedulers.elastic())
+            .onErrorResume(t->Mono.error(new StatusMessageException(404, "Not Found")));
     }
 }

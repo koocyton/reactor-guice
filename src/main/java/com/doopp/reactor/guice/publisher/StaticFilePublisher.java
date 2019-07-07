@@ -9,14 +9,29 @@ import reactor.netty.http.server.HttpServerResponse;
 
 import java.nio.file.*;
 import java.util.HashMap;
+import java.util.Map;
 
 public class StaticFilePublisher {
 
-    public Mono<Void> sendFile(HttpServerRequest req, HttpServerResponse resp) {
+    private static Map<String, String> resourceLocations = new HashMap<>();
 
-        String resourceUri = req.uri().endsWith("/")
-                ? "/public" + req.uri() + "index.html"
-                : "/public" + req.uri();
+    public Mono<Object> sendFile(HttpServerRequest req, HttpServerResponse resp) {
+
+//        String resourceUri = req.uri().endsWith("/")
+//                ? "/public" + req.uri() + "index.html"
+//                : "/public" + req.uri();
+
+        String resourceUri = "";
+
+        for(String uriDir : resourceLocations.keySet()) {
+            if (req.uri().startsWith(uriDir)) {
+                resourceUri = req.uri().endsWith("/")
+                    ? resourceLocations.get(uriDir) + req.uri().substring(uriDir.length()) + "index.html"
+                    : resourceLocations.get(uriDir) + req.uri().substring(uriDir.length());
+                System.out.printf("%s , %s, %s, %s\n", uriDir, resourceLocations.get(uriDir), req.uri(), req.uri().substring(uriDir.length()));
+                break;
+            }
+        }
 
         return ReactorGuiceServer.classResourcePath(resourceUri)
                 // .flatMap(path->this.setHeader(path, resp))
@@ -37,6 +52,10 @@ public class StaticFilePublisher {
             }
             return path;
         }).subscribeOn(Schedulers.elastic());
+    }
+
+    public void addResourceLocations(String uriDir, String resourcePath) {
+        resourceLocations.put(uriDir, resourcePath);
     }
 
 //    public Mono<Void> sendFile3(HttpServerRequest req, HttpServerResponse resp) {
