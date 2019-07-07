@@ -17,20 +17,28 @@ public class StaticFilePublisher {
 
     public Mono<Object> sendFile(HttpServerRequest req, HttpServerResponse resp) {
 
-//        String resourceUri = req.uri().endsWith("/")
-//                ? "/public" + req.uri() + "index.html"
-//                : "/public" + req.uri();
-
         String resourceUri = "";
 
         for(String uriDir : resourceLocations.keySet()) {
-            if (req.uri().startsWith(uriDir)) {
+            if (!uriDir.equals("/") && req.uri().startsWith(uriDir)) {
                 resourceUri = req.uri().endsWith("/")
                     ? resourceLocations.get(uriDir) + req.uri().substring(uriDir.length()) + "index.html"
                     : resourceLocations.get(uriDir) + req.uri().substring(uriDir.length());
-                System.out.printf("%s , %s, %s, %s\n", uriDir, resourceLocations.get(uriDir), req.uri(), req.uri().substring(uriDir.length()));
+                System.out.printf("{\n  %s\n  %s\n  %s\n  %s\n  %s\n}\n",
+                    uriDir,
+                    resourceLocations.get(uriDir),
+                    req.uri().substring(uriDir.length()),
+                    req.uri(),
+                    resourceUri
+                );
                 break;
             }
+        }
+
+        if (resourceUri.equals("") && resourceLocations.get("/")!=null) {
+            resourceUri = req.uri().endsWith("/")
+                ? resourceLocations.get("/") + req.uri().substring(1) + "index.html"
+                : resourceLocations.get("/") + req.uri().substring(1);
         }
 
         return ReactorGuiceServer.classResourcePath(resourceUri)
@@ -55,7 +63,15 @@ public class StaticFilePublisher {
     }
 
     public void addResourceLocations(String uriDir, String resourcePath) {
-        resourceLocations.put(uriDir, resourcePath);
+        uriDir = uriDir.endsWith("/") ? uriDir.substring(0, uriDir.length()-1) : uriDir;
+        resourcePath = resourcePath.endsWith("/") ? resourcePath : resourcePath + "/";
+        if (uriDir.equals("") || uriDir.equals("/")) {
+            resourceLocations.put("/", resourcePath);
+        }
+        else {
+            resourceLocations.put(uriDir + "/", resourcePath);
+            resourceLocations.put(uriDir, resourcePath);
+        }
     }
 
 //    public Mono<Void> sendFile3(HttpServerRequest req, HttpServerResponse resp) {
