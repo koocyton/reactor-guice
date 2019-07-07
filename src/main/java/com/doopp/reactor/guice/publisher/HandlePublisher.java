@@ -510,8 +510,18 @@ public class HandlePublisher {
     private void formParams(HttpServerRequest request, ByteBuf content, Map<String, List<String>> formParams, Map<String, List<FileUpload>> fileParams) {
         if (content != null && getRequestContentType(request).equals("")) {
             // POST Params
-            FullHttpRequest dhr = new DefaultFullHttpRequest(request.version(), request.method(), request.uri(), content, request.requestHeaders(), EmptyHttpHeaders.INSTANCE);
-            HttpPostRequestDecoder postDecoder = new HttpPostRequestDecoder(new DefaultHttpDataFactory(false), dhr, CharsetUtil.UTF_8);
+            // FullHttpRequest dhr = new DefaultFullHttpRequest(request.version(), request.method(), request.uri(), content, request.requestHeaders(), EmptyHttpHeaders.INSTANCE);
+            HttpPostRequestDecoder postDecoder = new HttpPostRequestDecoder(
+                new DefaultHttpDataFactory(false),
+                new DefaultFullHttpRequest(request.version(),
+                    request.method(),
+                    request.uri(),
+                    content,
+                    request.requestHeaders(),
+                    EmptyHttpHeaders.INSTANCE
+                ),
+                CharsetUtil.UTF_8
+            );
             // loop data
             for (InterfaceHttpData data : postDecoder.getBodyHttpDatas()) {
                 String name = data.getName();
@@ -523,11 +533,11 @@ public class HandlePublisher {
                 // 上传文件的内容
                 else if (data.getHttpDataType() == InterfaceHttpData.HttpDataType.FileUpload) {
                     fileParams.computeIfAbsent(name, k -> new ArrayList<>());
-                    fileParams.get(name).add(((MemoryFileUpload) data).copy());
+                    fileParams.get(name).add(((MemoryFileUpload) data).retain());
                 }
             }
             postDecoder.destroy();
-            dhr.release();
+            // dhr.release();
             // content.release();
         }
     }

@@ -120,7 +120,7 @@ public class AppServer {
                 .map(byteBuf -> byteBuf.toString(CharsetUtil.UTF_8))
                 .block();
 
-            // System.out.println("" + ii + " : " + hhe);
+            System.out.println("" + ii + " : " + hhe);
         }
         System.out.println("ok");
     }
@@ -128,7 +128,7 @@ public class AppServer {
     @Test
     public void testPostJsonBean() {
 
-        for(int ii=0; ii<10000; ii++) {
+        for(int ii=0; ii<100000; ii++) {
             ByteBuf buf = Unpooled.wrappedBuffer("{\"id\":\"123123121312312\", \"name\":\"wuyi\"}".getBytes()).retain();
 
             String hhe = HttpClient.create()
@@ -148,24 +148,26 @@ public class AppServer {
 
     @Test
     public void testPostFormBean() {
-        String hhe = HttpClient.create()
-            .post()
-            .uri("http://127.0.0.1:8083/kreactor/test/post-bean")
-            .sendForm((req, form) -> form.multipart(false)
-                .attr("id", "123123121312312")
-                .attr("account", "account")
-                .attr("password", "password")
-                .attr("name", "name")
-            )
-            .responseSingle((res, content) -> content)
-            .map(byteBuf -> byteBuf.toString(CharsetUtil.UTF_8))
-            .block();
-        System.out.println(hhe);
+        for (int ii=0; ii<100000; ii++) {
+            String hhe = HttpClient.create()
+                .post()
+                .uri("http://127.0.0.1:8083/kreactor/test/post-bean")
+                .sendForm((req, form) -> form.multipart(false)
+                    .attr("id", "123123121312312")
+                    .attr("account", "account")
+                    .attr("password", "password")
+                    .attr("name", "name")
+                )
+                .responseSingle((res, content) -> content)
+                .map(byteBuf -> byteBuf.toString(CharsetUtil.UTF_8))
+                .block();
+            System.out.println("" + ii + " : " + hhe);
+        }
     }
 
     @Test
     public void testFileUpload() {
-        for(int ii=0; ii<100; ii++) {
+        for(int ii=0; ii<10000; ii++) {
             String hhe = HttpClient.create()
                 .post()
                 .uri("http://127.0.0.1:8083/kreactor/test/post-bean")
