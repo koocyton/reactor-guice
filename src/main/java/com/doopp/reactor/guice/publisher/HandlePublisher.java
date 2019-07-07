@@ -19,6 +19,7 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import java.io.*;
 import java.lang.reflect.*;
+import java.nio.charset.Charset;
 import java.util.*;
 
 public class HandlePublisher {
@@ -411,11 +412,11 @@ public class HandlePublisher {
     }
 
     private void saveFile(File file, FileUpload fileUpload) {
-        try (RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw")) {
-            randomAccessFile.seek(0);
-            randomAccessFile.write(fileUpload.get());
-        }
-        catch(Exception ignored) {}
+//        try (RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw")) {
+//            randomAccessFile.seek(0);
+//            randomAccessFile.write(fileUpload.get());
+//        }
+//        catch(Exception ignored) {}
 
 //        AsynchronousFileChannel channel = null;
 //        try {
@@ -509,31 +510,24 @@ public class HandlePublisher {
     // Post 请求
     private void formParams(HttpServerRequest request, ByteBuf content, Map<String, List<String>> formParams, Map<String, List<FileUpload>> fileParams) {
         if (content != null && getRequestContentType(request).equals("")) {
+            // Request headers
+            // HttpHeaders requestHttpHeaders = request.requestHeaders();
             // POST Params
-            // FullHttpRequest dhr = new DefaultFullHttpRequest(request.version(), request.method(), request.uri(), content, request.requestHeaders(), EmptyHttpHeaders.INSTANCE);
-            HttpPostRequestDecoder postDecoder = new HttpPostRequestDecoder(
-                new DefaultHttpDataFactory(false),
-                new DefaultFullHttpRequest(request.version(),
-                    request.method(),
-                    request.uri(),
-                    content,
-                    request.requestHeaders(),
-                    EmptyHttpHeaders.INSTANCE
-                ),
-                CharsetUtil.UTF_8
-            );
+            FullHttpRequest dhr = new DefaultFullHttpRequest(request.version(), request.method(), request.uri(), content);
+            dhr.headers().set(request.requestHeaders());
+            // set Request Decoder
+            HttpPostRequestDecoder postDecoder = new HttpPostRequestDecoder(new DefaultHttpDataFactory(false), dhr, CharsetUtil.UTF_8);
             // loop data
             for (InterfaceHttpData data : postDecoder.getBodyHttpDatas()) {
                 String name = data.getName();
-                // 一般 post 内容
-                if (data.getHttpDataType() == InterfaceHttpData.HttpDataType.Attribute) {
-                    formParams.computeIfAbsent(name, k -> new ArrayList<>());
-                    formParams.get(name).add(((MemoryAttribute) data).getValue());
+                if (name!=null && data.getHttpDataType() == InterfaceHttpData.HttpDataType.Attribute) {
+                    formParams.computeIfAbsent(name, k -> new ArrayList<>())
+                        .add(((MemoryAttribute) data).getValue());
                 }
                 // 上传文件的内容
-                else if (data.getHttpDataType() == InterfaceHttpData.HttpDataType.FileUpload) {
-                    fileParams.computeIfAbsent(name, k -> new ArrayList<>());
-                    fileParams.get(name).add(((MemoryFileUpload) data).retain());
+                else if (name!=null && data.getHttpDataType() == InterfaceHttpData.HttpDataType.FileUpload) {
+                    fileParams.computeIfAbsent(name, k -> new ArrayList<>())
+                        .add(((MemoryFileUpload) data).copy());
                 }
             }
             postDecoder.destroy();
