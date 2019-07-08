@@ -24,13 +24,13 @@ public class StaticFilePublisher {
                 resourceUri = req.uri().endsWith("/")
                     ? resourceLocations.get(uriDir) + req.uri().substring(uriDir.length()) + "index.html"
                     : resourceLocations.get(uriDir) + req.uri().substring(uriDir.length());
-                System.out.printf("{\n  %s\n  %s\n  %s\n  %s\n  %s\n}\n",
-                    uriDir,
-                    resourceLocations.get(uriDir),
-                    req.uri().substring(uriDir.length()),
-                    req.uri(),
-                    resourceUri
-                );
+//                System.out.printf("{\n  %s\n  %s\n  %s\n  %s\n  %s\n}\n",
+//                    uriDir,
+//                    resourceLocations.get(uriDir),
+//                    req.uri().substring(uriDir.length()),
+//                    req.uri(),
+//                    resourceUri
+//                );
                 break;
             }
         }
