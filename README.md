@@ -53,13 +53,13 @@ Reactor-guice 是一个基于 Google Guice 和 Reactor-netty 的 Reactor 微服�
 <dependency>
     <groupId>com.doopp</groupId>
     <artifactId>reactor-guice</artifactId>
-    <version>0.12.3-SNAPSHOT</version>
+    <version>0.12.4-SNAPSHOT</version>
 </dependency>
 ```
 
 #### gradle
 ```
-compile 'com.doopp:reactor-guice:0.12.3-SNAPSHOT'
+compile 'com.doopp:reactor-guice:0.12.4-SNAPSHOT'
 ```
 
 ### 2. 创建应用
@@ -98,6 +98,10 @@ public static void main(String[] args) throws IOException {
                 .setHttpMessageConverter(new MyGsonHttpMessageConverter())
                 // 设定自动扫描 Controller 和 Service 的包名，可以配置多个
                 .basePackages("com.doopp.gauss.app", ...)
+                // 配置多个静态资源
+                .addResource("/static/", "/static-public/")
+                .addResource("/", "/public/")
+                // https
                 .setHttps(new File(jksFilePath), jksPassword, jksSecret)
                 // 目前仅支持通过 URI 来过滤，可以多次 addFilter
                 .addFilter("/", AppFilter.class)

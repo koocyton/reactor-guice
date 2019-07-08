@@ -11,6 +11,7 @@ import io.netty.handler.codec.http.*;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.multipart.*;
 import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCounted;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.http.server.HttpServerResponse;
@@ -21,6 +22,7 @@ import java.io.*;
 import java.lang.reflect.*;
 import java.nio.charset.Charset;
 import java.util.*;
+import java.util.function.Consumer;
 
 public class HandlePublisher {
 
@@ -129,6 +131,9 @@ public class HandlePublisher {
                 );
         }
         return objectMono.flatMap(oo -> {
+            fileParams
+                    .forEach((name, fileUploads)->fileUploads
+                            .forEach(ReferenceCounted::release));
             try {
                 Object result = method.invoke(handleObject, oo);
                 return (result instanceof Mono<?>) ? (Mono<?>) result : Mono.just(result);
@@ -412,11 +417,11 @@ public class HandlePublisher {
     }
 
     private void saveFile(File file, FileUpload fileUpload) {
-//        try (RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw")) {
-//            randomAccessFile.seek(0);
-//            randomAccessFile.write(fileUpload.get());
-//        }
-//        catch(Exception ignored) {}
+        try (RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw")) {
+            randomAccessFile.seek(0);
+            randomAccessFile.write(fileUpload.get());
+        }
+        catch(Exception ignored) {}
 
 //        AsynchronousFileChannel channel = null;
 //        try {
@@ -527,11 +532,11 @@ public class HandlePublisher {
                 // 上传文件的内容
                 else if (name!=null && data.getHttpDataType() == InterfaceHttpData.HttpDataType.FileUpload) {
                     fileParams.computeIfAbsent(name, k -> new ArrayList<>())
-                        .add(((MemoryFileUpload) data).copy());
+                        .add(((MemoryFileUpload) data).retain());
                 }
             }
             postDecoder.destroy();
-            // dhr.release();
+            dhr.release();
             // content.release();
         }
     }

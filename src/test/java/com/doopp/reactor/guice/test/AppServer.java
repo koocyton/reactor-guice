@@ -32,8 +32,8 @@ public class AppServer {
     public void testServer() throws IOException, InterruptedException {
 
         Properties properties = new Properties();
-        properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
-        // properties.load(new FileInputStream("/Developer/Project/reactor-guice/application.properties"));
+        // properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
+        properties.load(new FileInputStream("/Developer/Project/reactor-guice/application.properties"));
 
 
 
@@ -67,7 +67,7 @@ public class AppServer {
             // .setTemplateDelegate(new ThymeleafTemplateDelegate())
             .basePackages("com.doopp.reactor.guice.test")
             .addFilter("/", TestFilter.class)
-            .addResource("/static/", "/public/")
+                .addResource("/static/", "/static-public/")
             .addResource("/", "/public/")
             // .setHttps(new File(jksFilePath), jksPassword, jksSecret)
             // .setTestHttps()
@@ -170,14 +170,14 @@ public class AppServer {
         for(int ii=0; ii<10000; ii++) {
             String hhe = HttpClient.create()
                 .post()
-                .uri("http://0.0.0.0:8085/api/login")
-                // .uri("http://127.0.0.1:8083/kreactor/test/post-bean")
+                // .uri("http://0.0.0.0:8085/api/login")
+                .uri("http://127.0.0.1:8083/kreactor/test/post-bean")
                 .sendForm((req, form) -> form.multipart(true)
                     .attr("id", "123123121312312")
                     .attr("account", "liuyi")
                     .attr("password", "password")
                     .attr("name", "name")
-                    // .file("image", new File("/Users/henry/Pictures/girl.jpg"))
+                    .file("image", new File("/Users/henry/Pictures/girl.jpg"))
                     // .file("image", new File("C:\\Users\\koocyton\\Pictures\\cloud.jpg"))
                     // .file("image", new File("C:\\Users\\koocyton\\Pictures\\st.jpg"))
                     // .file("image", new File("C:\\Users\\koocyton\\Pictures\\zz.txt"))
