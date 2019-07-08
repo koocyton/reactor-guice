@@ -11,6 +11,7 @@ import io.netty.handler.codec.http.*;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.multipart.*;
 import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCounted;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.http.server.HttpServerResponse;
@@ -18,17 +19,18 @@ import reactor.netty.http.server.HttpServerResponse;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import java.io.*;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Parameter;
+import java.lang.reflect.*;
+import java.nio.charset.Charset;
 import java.util.*;
+import java.util.function.Consumer;
 
 public class HandlePublisher {
 
     private HttpMessageConverter httpMessageConverter;
 
     private TemplateDelegate templateDelegate;
+
+    private static String APPLICATION_PROTO = "application/x-protobuf";
 
     public void setHttpMessageConverter(HttpMessageConverter httpMessageConverter) {
         this.httpMessageConverter = httpMessageConverter;
@@ -91,7 +93,7 @@ public class HandlePublisher {
         // values of form post
         Map<String, List<String>> formParams = new HashMap<>();
         // values of file upload
-        Map<String, List<MemoryFileUpload>> fileParams = new HashMap<>();
+        Map<String, List<FileUpload>> fileParams = new HashMap<>();
         // get results
         this.queryParams(request, questParams);
 
@@ -115,7 +117,7 @@ public class HandlePublisher {
                     );
                 });
         } else {
-                this.formParams(request, null, formParams, fileParams);
+                // this.formParams(request, null, formParams, fileParams);
                 objectMono = methodParams(
                         method,
                         request,
@@ -129,6 +131,9 @@ public class HandlePublisher {
                 );
         }
         return objectMono.flatMap(oo -> {
+            fileParams
+                    .forEach((name, fileUploads)->fileUploads
+                            .forEach(ReferenceCounted::release));
             try {
                 Object result = method.invoke(handleObject, oo);
                 return (result instanceof Mono<?>) ? (Mono<?>) result : Mono.just(result);
@@ -158,26 +163,13 @@ public class HandlePublisher {
                                   ByteBuf content,
                                   Map<String, List<String>> questParams,
                                   Map<String, List<String>> formParams,
-                                  Map<String, List<MemoryFileUpload>> fileParams) {
+                                  Map<String, List<FileUpload>> fileParams) {
 
         // values of method parameters
         ArrayList<Object> objectList = new ArrayList<>();
 
-        String ProtobufMediaType = "application/x-protobuf";
-
         // is a json request
-        String requestContentType = "";
-        List<String> requestHeaderContentTypes = request.requestHeaders().getAll(HttpHeaderNames.CONTENT_TYPE);
-        for (String contentType : requestHeaderContentTypes) {
-            if (contentType.contains(MediaType.APPLICATION_JSON)) {
-                requestContentType = MediaType.APPLICATION_JSON;
-                break;
-            }
-            else if (contentType.contains(ProtobufMediaType)) {
-                requestContentType = ProtobufMediaType;
-                break;
-            }
-        }
+        String requestContentType = getRequestContentType(request);
 
         for (Parameter parameter : method.getParameters()) {
             Class<?> parameterClazz = parameter.getType();
@@ -248,23 +240,13 @@ public class HandlePublisher {
                     objectList.add(jsonBeanParam(content, parameterClazz));
                 }
                 // if protobuf request
-                else if (requestContentType.equals(ProtobufMediaType)) {
+                else if (requestContentType.equals(APPLICATION_PROTO)) {
                     objectList.add(protobufBeanParam(content, parameterClazz));
                 }
                 // default is form request
                 else {
                     try {
-                        objectList.add(formBeanParam(
-                                request,
-                                response,
-                                requestAttribute,
-                                modelMap,
-                                content,
-                                questParams,
-                                formParams,
-                                fileParams,
-                                parameterClazz
-                        ));
+                        objectList.add(formBeanParam(formParams, fileParams, parameterClazz));
                     }
                     catch(IllegalAccessException | InstantiationException | InvocationTargetException e) {
                         return Mono.error(e);
@@ -303,14 +285,8 @@ public class HandlePublisher {
         }
     }
 
-    private Object formBeanParam(HttpServerRequest request,
-                                 HttpServerResponse response,
-                                 com.doopp.reactor.guice.RequestAttribute requestAttribute,
-                                 ModelMap modelMap,
-                                 ByteBuf content,
-                                 Map<String, List<String>> questParams,
-                                 Map<String, List<String>> formParams,
-                                 Map<String, List<MemoryFileUpload>> fileParams,
+    private Object formBeanParam(Map<String, List<String>> formParams,
+                                 Map<String, List<FileUpload>> fileParams,
                                  Class<?> parameterClazz) throws IllegalAccessException, InstantiationException, InvocationTargetException {
 
         Object parameterObject = parameterClazz.newInstance();
@@ -318,7 +294,17 @@ public class HandlePublisher {
         for(Field parameterField : parameterFields) {
             try {
                 Method parameterMethod = parameterObject.getClass().getMethod("set" + captureName(parameterField.getName()), parameterField.getType());
-                parameterMethod.invoke(parameterObject, classCastStringValue(formParams.get(parameterField.getName()), parameterField.getType()));
+                if (parameterMethod != null && Modifier.isPublic(parameterMethod.getModifiers())) {
+                    if (parameterField.getType()==FileUpload[].class) {
+                        parameterMethod.invoke(parameterObject, fileParams.get(parameterField.getName()));
+                    }
+                    else if (parameterField.getType()==FileUpload.class) {
+                        parameterMethod.invoke(parameterObject, fileParams.get(parameterField.getName()).get(0));
+                    }
+                    else {
+                        parameterMethod.invoke(parameterObject, classCastStringValue(formParams.get(parameterField.getName()), parameterField.getType()));
+                    }
+                }
             }
             catch(NoSuchMethodException ignored) {}
         }
@@ -344,6 +330,24 @@ public class HandlePublisher {
 
     }
 
+    // GET request type
+    private String getRequestContentType(HttpServerRequest request) {
+        // is a json request
+        String requestContentType = "";
+        List<String> requestHeaderContentTypes = request.requestHeaders().getAll(HttpHeaderNames.CONTENT_TYPE);
+        for (String contentType : requestHeaderContentTypes) {
+            if (contentType.contains(MediaType.APPLICATION_JSON)) {
+                requestContentType = MediaType.APPLICATION_JSON;
+                break;
+            }
+            else if (contentType.contains(APPLICATION_PROTO)) {
+                requestContentType = APPLICATION_PROTO;
+                break;
+            }
+        }
+        return requestContentType;
+    }
+
     // 进行字母的ascii编码前移，效率要高于截取字符串进行转换的操作
     private static String captureName(String str) {
         char[] cs=str.toCharArray();
@@ -351,7 +355,7 @@ public class HandlePublisher {
         return String.valueOf(cs);
     }
 
-    private <T> T classCastFileUploadValue(List<MemoryFileUpload> value, String path, Class<T> clazz) throws IOException {
+    private <T> T classCastFileUploadValue(List<FileUpload> value, String path, Class<T> clazz) throws IOException {
         // if value is null
         if (value == null) {
             return clazz.cast(null);
@@ -382,22 +386,20 @@ public class HandlePublisher {
         }
         // one
         else if (clazz == FileUpload.class) {
-            return clazz.cast(value.get(0).retain());
-        }
-        // more
-        else if (clazz == FileUpload[].class) {
-            return clazz.cast(
-                    value.stream().map(MemoryFileUpload::retain).toArray(FileUpload[]::new)
-            );
-        }
-        // one
-        else if (clazz == MemoryFileUpload.class) {
             return clazz.cast(value.get(0));
         }
         // more
-        else if (clazz == MemoryFileUpload[].class) {
-            return clazz.cast(value.toArray(new MemoryFileUpload[0]));
+        else if (clazz == FileUpload[].class) {
+            return clazz.cast(value.toArray(new FileUpload[0]));
         }
+//        // one
+//        else if (clazz == MemoryFileUpload.class) {
+//            return clazz.cast(value.get(0));
+//        }
+//        // more
+//        else if (clazz == MemoryFileUpload[].class) {
+//            return clazz.cast(value.toArray(new MemoryFileUpload[0]));
+//        }
         // one byte[]
         else if (clazz == byte[].class) {
             return clazz.cast(value.get(0).get());
@@ -405,7 +407,7 @@ public class HandlePublisher {
         // more byte[]
         else if (clazz == byte[][].class) {
             ArrayList<byte[]> byteValues = new ArrayList<>();
-            for (MemoryFileUpload s : value) {
+            for (FileUpload s : value) {
                 byteValues.add(s.get());
             }
             return clazz.cast(byteValues.toArray());
@@ -511,23 +513,26 @@ public class HandlePublisher {
     }
 
     // Post 请求
-    private void formParams(HttpServerRequest request, ByteBuf content, Map<String, List<String>> formParams, Map<String, List<MemoryFileUpload>> fileParams) {
-        if (content != null) {
+    private void formParams(HttpServerRequest request, ByteBuf content, Map<String, List<String>> formParams, Map<String, List<FileUpload>> fileParams) {
+        if (content != null && getRequestContentType(request).equals("")) {
+            // Request headers
+            // HttpHeaders requestHttpHeaders = request.requestHeaders();
             // POST Params
-            FullHttpRequest dhr = new DefaultFullHttpRequest(request.version(), request.method(), request.uri(), content, request.requestHeaders(), EmptyHttpHeaders.INSTANCE);
+            FullHttpRequest dhr = new DefaultFullHttpRequest(request.version(), request.method(), request.uri(), content);
+            dhr.headers().set(request.requestHeaders());
+            // set Request Decoder
             HttpPostRequestDecoder postDecoder = new HttpPostRequestDecoder(new DefaultHttpDataFactory(false), dhr, CharsetUtil.UTF_8);
             // loop data
             for (InterfaceHttpData data : postDecoder.getBodyHttpDatas()) {
                 String name = data.getName();
-                // 一般 post 内容
-                if (data.getHttpDataType() == InterfaceHttpData.HttpDataType.Attribute) {
-                    formParams.computeIfAbsent(name, k -> new ArrayList<>());
-                    formParams.get(name).add(((MemoryAttribute) data).getValue());
+                if (name!=null && data.getHttpDataType() == InterfaceHttpData.HttpDataType.Attribute) {
+                    formParams.computeIfAbsent(name, k -> new ArrayList<>())
+                        .add(((MemoryAttribute) data).getValue());
                 }
                 // 上传文件的内容
-                else if (data.getHttpDataType() == InterfaceHttpData.HttpDataType.FileUpload) {
-                    fileParams.computeIfAbsent(name, k -> new ArrayList<>());
-                    fileParams.get(name).add((MemoryFileUpload) data);
+                else if (name!=null && data.getHttpDataType() == InterfaceHttpData.HttpDataType.FileUpload) {
+                    fileParams.computeIfAbsent(name, k -> new ArrayList<>())
+                        .add(((MemoryFileUpload) data).retain());
                 }
             }
             postDecoder.destroy();

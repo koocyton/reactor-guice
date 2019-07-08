@@ -4,7 +4,6 @@ import com.doopp.reactor.guice.ReactorGuiceServer;
 import com.doopp.reactor.guice.test.proto.hello.Hello;
 import com.doopp.reactor.guice.test.util.MyGsonHttpMessageConverter;
 import com.doopp.reactor.guice.view.FreemarkTemplateDelegate;
-import com.google.inject.*;
 import com.google.inject.name.Names;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -17,7 +16,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxProcessor;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.ReplayProcessor;
-import reactor.core.scheduler.Schedulers;
 import reactor.netty.NettyPipeline;
 import reactor.netty.http.client.HttpClient;
 
@@ -25,7 +23,6 @@ import javax.ws.rs.core.MediaType;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.Properties;
 
@@ -70,8 +67,10 @@ public class AppServer {
             // .setTemplateDelegate(new ThymeleafTemplateDelegate())
             .basePackages("com.doopp.reactor.guice.test")
             .addFilter("/", TestFilter.class)
+            .addResource("/static/", "/static-public/")
+            .addResource("/", "/public/")
             // .setHttps(new File(jksFilePath), jksPassword, jksSecret)
-            .setTestHttps()
+            // .setTestHttps()
             .printError(true)
             // .crossOrigin(true)
             .launch();
@@ -121,7 +120,7 @@ public class AppServer {
                 .map(byteBuf -> byteBuf.toString(CharsetUtil.UTF_8))
                 .block();
 
-            // System.out.println("" + ii + " : " + hhe);
+            System.out.println("" + ii + " : " + hhe);
         }
         System.out.println("ok");
     }
@@ -129,7 +128,7 @@ public class AppServer {
     @Test
     public void testPostJsonBean() {
 
-        for(int ii=0; ii<10000; ii++) {
+        for(int ii=0; ii<100000; ii++) {
             ByteBuf buf = Unpooled.wrappedBuffer("{\"id\":\"123123121312312\", \"name\":\"wuyi\"}".getBytes()).retain();
 
             String hhe = HttpClient.create()
@@ -149,35 +148,39 @@ public class AppServer {
 
     @Test
     public void testPostFormBean() {
-        String hhe = HttpClient.create()
-            .post()
-            .uri("http://127.0.0.1:8083/kreactor/test/post-bean")
-            .sendForm((req, form) -> form.multipart(false)
-                .attr("id", "123123121312312")
-                .attr("account", "account")
-                .attr("password", "password")
-                .attr("name", "name")
-            )
-            .responseSingle((res, content) -> content)
-            .map(byteBuf -> byteBuf.toString(CharsetUtil.UTF_8))
-            .block();
-        System.out.println(hhe);
-    }
-
-    @Test
-    public void testFileUpload() {
-        for(int ii=0; ii<1000000; ii++) {
+        for (int ii=0; ii<100000; ii++) {
             String hhe = HttpClient.create()
                 .post()
                 .uri("http://127.0.0.1:8083/kreactor/test/post-bean")
-                .sendForm((req, form) -> form.multipart(true)
+                .sendForm((req, form) -> form.multipart(false)
                     .attr("id", "123123121312312")
                     .attr("account", "account")
                     .attr("password", "password")
                     .attr("name", "name")
-                    // .file("image", new File("/Users/henry/Pictures/girl.jpg"))
+                )
+                .responseSingle((res, content) -> content)
+                .map(byteBuf -> byteBuf.toString(CharsetUtil.UTF_8))
+                .block();
+            System.out.println("" + ii + " : " + hhe);
+        }
+    }
+
+    @Test
+    public void testFileUpload() {
+        for(int ii=0; ii<10000; ii++) {
+            String hhe = HttpClient.create()
+                .post()
+                // .uri("http://0.0.0.0:8085/api/login")
+                .uri("http://127.0.0.1:8083/kreactor/test/post-bean")
+                .sendForm((req, form) -> form.multipart(true)
+                    .attr("id", "123123121312312")
+                    .attr("account", "liuyi")
+                    .attr("password", "password")
+                    .attr("name", "name")
+                    .file("image", new File("/Users/henry/Pictures/girl.jpg"))
                     // .file("image", new File("C:\\Users\\koocyton\\Pictures\\cloud.jpg"))
                     // .file("image", new File("C:\\Users\\koocyton\\Pictures\\st.jpg"))
+                    // .file("image", new File("C:\\Users\\koocyton\\Pictures\\zz.txt"))
                 )
                 .responseSingle((res, content) -> content)
                 .map(byteBuf -> byteBuf.toString(CharsetUtil.UTF_8))

@@ -39,8 +39,10 @@ Reactor-guice 是一个基于 Google Guice 和 Reactor-netty 的 Reactor 微服�
        简化 websocket 的接口
        网关模式增加 websocket
 
-0.12.3 增加 https
-       修复上传文件多次后，溢出的情况
+0.12.4 增加 Https (0.12.3)
+       静态文件目录可配置多个
+       修复上传文件多次后，溢出的情况，补充 FileUpload.release()
+       修复非 Form POST ，错误的做了 Bytebuf.release()
 
 ```
 
@@ -51,13 +53,13 @@ Reactor-guice 是一个基于 Google Guice 和 Reactor-netty 的 Reactor 微服�
 <dependency>
     <groupId>com.doopp</groupId>
     <artifactId>reactor-guice</artifactId>
-    <version>0.12.3</version>
+    <version>0.12.4</version>
 </dependency>
 ```
 
 #### gradle
 ```
-compile 'com.doopp:reactor-guice:0.12.3'
+compile 'com.doopp:reactor-guice:0.12.4'
 ```
 
 ### 2. 创建应用
@@ -96,7 +98,10 @@ public static void main(String[] args) throws IOException {
                 .setHttpMessageConverter(new MyGsonHttpMessageConverter())
                 // 设定自动扫描 Controller 和 Service 的包名，可以配置多个
                 .basePackages("com.doopp.gauss.app", ...)
-                // 配置 HTTPS
+                // 配置多个静态资源
+                .addResource("/static/", "/static-public/")
+                .addResource("/", "/public/")
+                // https
                 .setHttps(new File(jksFilePath), jksPassword, jksSecret)
                 // 目前仅支持通过 URI 来过滤，可以多次 addFilter
                 .addFilter("/", AppFilter.class)

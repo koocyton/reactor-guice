@@ -9,14 +9,37 @@ import reactor.netty.http.server.HttpServerResponse;
 
 import java.nio.file.*;
 import java.util.HashMap;
+import java.util.Map;
 
 public class StaticFilePublisher {
 
-    public Mono<Void> sendFile(HttpServerRequest req, HttpServerResponse resp) {
+    private static Map<String, String> resourceLocations = new HashMap<>();
 
-        String resourceUri = req.uri().endsWith("/")
-                ? "/public" + req.uri() + "index.html"
-                : "/public" + req.uri();
+    public Mono<Object> sendFile(HttpServerRequest req, HttpServerResponse resp) {
+
+        String resourceUri = "";
+
+        for(String uriDir : resourceLocations.keySet()) {
+            if (!uriDir.equals("/") && req.uri().startsWith(uriDir)) {
+                resourceUri = req.uri().endsWith("/")
+                    ? resourceLocations.get(uriDir) + req.uri().substring(uriDir.length()) + "index.html"
+                    : resourceLocations.get(uriDir) + req.uri().substring(uriDir.length());
+//                System.out.printf("{\n  %s\n  %s\n  %s\n  %s\n  %s\n}\n",
+//                    uriDir,
+//                    resourceLocations.get(uriDir),
+//                    req.uri().substring(uriDir.length()),
+//                    req.uri(),
+//                    resourceUri
+//                );
+                break;
+            }
+        }
+
+        if (resourceUri.equals("") && resourceLocations.get("/")!=null) {
+            resourceUri = req.uri().endsWith("/")
+                ? resourceLocations.get("/") + req.uri().substring(1) + "index.html"
+                : resourceLocations.get("/") + req.uri().substring(1);
+        }
 
         return ReactorGuiceServer.classResourcePath(resourceUri)
                 // .flatMap(path->this.setHeader(path, resp))
@@ -37,6 +60,18 @@ public class StaticFilePublisher {
             }
             return path;
         }).subscribeOn(Schedulers.elastic());
+    }
+
+    public void addResourceLocations(String uriDir, String resourcePath) {
+        uriDir = uriDir.endsWith("/") ? uriDir.substring(0, uriDir.length()-1) : uriDir;
+        resourcePath = resourcePath.endsWith("/") ? resourcePath : resourcePath + "/";
+        if (uriDir.equals("") || uriDir.equals("/")) {
+            resourceLocations.put("/", resourcePath);
+        }
+        else {
+            resourceLocations.put(uriDir + "/", resourcePath);
+            resourceLocations.put(uriDir, resourcePath);
+        }
     }
 
 //    public Mono<Void> sendFile3(HttpServerRequest req, HttpServerResponse resp) {
