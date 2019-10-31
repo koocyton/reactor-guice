@@ -10,6 +10,7 @@
 .idea/
 .gradle/
 **.jks
+.vscode/
 
 # Emacs meghanada
 .meghanada/

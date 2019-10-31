@@ -33,7 +33,7 @@ public class AppServer {
 
         Properties properties = new Properties();
         // properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
-        properties.load(new FileInputStream("/Developer/Project/reactor-guice/application.properties"));
+        properties.load(new FileInputStream("/Users/henry/IdeaProjects/reactor-guice/application.properties"));
 
 
 
@@ -213,7 +213,7 @@ public class AppServer {
     private static void testWebsocketClient() throws IOException {
         Properties properties = new Properties();
         // properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
-        properties.load(new FileInputStream("/Developer/Project/reactor-guice/application.properties"));
+        properties.load(new FileInputStream("/Users/henry/IdeaProjects/reactor-guice/application.properties"));
 
         int port = Integer.valueOf(properties.getProperty("server.port", "8081"));
 
@@ -222,6 +222,8 @@ public class AppServer {
         Flux.interval(Duration.ofMillis(1000))
             .map(Object::toString)
             .subscribe(client::onNext);
+
+        System.out.println("Receive text message ");
 
         HttpClient.create()
             // .port(port)
@@ -244,7 +246,7 @@ public class AppServer {
                     })
                         .subscribe();
                 })
-                    .options(NettyPipeline.SendOptions::flushOnEach)
+                    // .options(NettyPipeline.SendOptions::flushOnEach)
                     .sendString(client)
             )
             .blockLast();

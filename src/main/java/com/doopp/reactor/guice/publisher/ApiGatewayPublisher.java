@@ -168,7 +168,7 @@ public class ApiGatewayPublisher {
                         channel.writeAndFlush(frame.retain());
                     });
                 })
-                .options(NettyPipeline.SendOptions::flushOnEach)
+                // .options(NettyPipeline.SendOptions::flushOnEach)
                 .sendObject(messages.get(channelId))
             ).then();
         }
