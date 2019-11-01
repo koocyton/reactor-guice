@@ -178,6 +178,7 @@ public class ApiGatewayPublisher {
 
         @Override
         public Mono<Void> handleEvent(WebSocketFrame frame, Channel channel) {
+            System.out.println(frame);
             String channelId = channel.id().asLongText();
             messages.get(channelId).onNext(frame.retain());
             return Mono.empty();
