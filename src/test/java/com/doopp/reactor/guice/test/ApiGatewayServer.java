@@ -39,4 +39,9 @@ public class ApiGatewayServer {
             .printError(true)
             .launch();
     }
+
+    @Test
+    public void testWebsocketServer() {
+
+    }
 }

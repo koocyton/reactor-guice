@@ -26,11 +26,11 @@ public class WebsocketPublisher {
                                             connect -> {
                                                 // channel
                                                 Channel channel = connect.channel();
-                                                System.out.println("\n>>>");
+                                                System.out.println("\n\n >>>" + in);
                                                 System.out.println(channel);
                                                 // on disconnect
                                                 connect.onDispose().subscribe(null, null, () -> {
-                                                    System.out.println(handleObject);
+                                                    // System.out.println(handleObject);
                                                     handleObject.onClose(null, channel);
                                                 });
                                                 // set requestAttribute to channel
@@ -39,7 +39,7 @@ public class WebsocketPublisher {
                                                 // requestAttribute.setAttribute(CURRENT_CHANNEL, channel);
                                                 // on connect
                                                 handleObject.onConnect(channel);
-                                                System.out.println("on connect");
+                                                // System.out.println("on connect");
                                                 // receive frame
                                                 in.aggregateFrames().receiveFrames().subscribe(
                                                         frame->handleObject.handleEvent(frame, channel)
