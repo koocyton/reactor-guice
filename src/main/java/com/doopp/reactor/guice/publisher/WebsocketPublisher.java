@@ -3,19 +3,26 @@ package com.doopp.reactor.guice.publisher;
 import com.doopp.reactor.guice.RequestAttribute;
 import com.doopp.reactor.guice.websocket.WebSocketServerHandle;
 import io.netty.channel.Channel;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.UnicastProcessor;
-import reactor.netty.NettyPipeline;
+import reactor.core.scheduler.Schedulers;
 import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.http.server.HttpServerResponse;
 
 public class WebsocketPublisher {
 
+    private static final Logger log = LoggerFactory.getLogger(WebsocketPublisher.class);
+
     // the out put
     private static Flux<Object> rp = UnicastProcessor.create();
 
-    public Mono<Object> sendMessage(HttpServerRequest request, HttpServerResponse response, WebSocketServerHandle handleObject, Object requestAttributeObject) {
+    public Mono<Object> sendMessage2(HttpServerRequest request,
+                                    HttpServerResponse response,
+                                    WebSocketServerHandle handleObject,
+                                    Object requestAttributeObject) {
 
         return Mono.just((RequestAttribute) requestAttributeObject)
                 .flatMap(requestAttribute ->
@@ -51,5 +58,42 @@ public class WebsocketPublisher {
                                             .sendObject(rp);
                                 })
                 );
+    }
+
+    public Mono<Object> sendMessage(HttpServerRequest request, HttpServerResponse response, WebSocketServerHandle handleObject, Object requestAttributeObject) {
+        // return
+        return response.header("content-type", "text/plain")
+                .sendWebsocket((in, out) -> {
+                    // return
+                    return out.withConnection(
+                            connect -> {
+                                Channel channel = connect.channel();
+                                connect.onDispose().subscribe(null, null, () -> {
+                                    handleObject.onClose(null, channel);
+                                });
+                                channel.attr(RequestAttribute.REQUEST_ATTRIBUTE).set((RequestAttribute) requestAttributeObject);
+                                handleObject.onConnect(channel);
+                                in.aggregateFrames().receiveFrames().subscribe(
+                                        frame->handleObject.handleEvent(frame, channel)
+                                );
+                            })
+                            .sendString(UnicastProcessor.create());
+                })
+                .then(Mono.empty());
+    }
+
+    public Mono<Object> sendMessage5(HttpServerRequest request,
+                                     HttpServerResponse response,
+                                     WebSocketServerHandle handleObject,
+                                     Object requestAttributeObject) {
+        return response.header("content-type", "text/plain")
+                .sendWebsocket((in, out) ->
+                        out.sendString(in.receive()
+                                .asString()
+                                .publishOn(Schedulers.single())
+                                // .doOnNext(s -> serverRes.incrementAndGet())
+                                // .map(it -> it + ' ' + request.param("param") + '!')
+                                .map(s-> "a")))
+                .then(Mono.empty());
     }
 }
