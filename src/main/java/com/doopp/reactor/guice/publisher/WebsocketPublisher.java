@@ -46,7 +46,7 @@ public class WebsocketPublisher {
                                                 );
                                             })
                                             // options
-                                            .options(NettyPipeline.SendOptions::flushOnEach)
+                                            // .options(NettyPipeline.SendOptions::flushOnEach)
                                             // .sendObject(Flux.just("abc".getBytes()));
                                             .sendObject(rp);
                                 })

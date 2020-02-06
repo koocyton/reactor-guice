@@ -244,7 +244,7 @@ public class AppServer {
                     })
                         .subscribe();
                 })
-                    .options(NettyPipeline.SendOptions::flushOnEach)
+                    // .options(NettyPipeline.SendOptions::flushOnEach)
                     .sendString(client)
             )
             .blockLast();

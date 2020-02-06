@@ -13,13 +13,11 @@ import io.netty.handler.codec.http.websocketx.*;
 import reactor.core.publisher.FluxProcessor;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.ReplayProcessor;
-import reactor.netty.NettyPipeline;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.http.server.HttpServerResponse;
 
 import java.net.URL;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -171,7 +169,7 @@ public class ApiGatewayPublisher {
                         channel.writeAndFlush(frame.retain());
                     });
                 })
-                .options(NettyPipeline.SendOptions::flushOnEach)
+                // .options(NettyPipeline.SendOptions::flushOnEach)
                 .sendObject(messages.get(channelId))
             ).then();
         }
