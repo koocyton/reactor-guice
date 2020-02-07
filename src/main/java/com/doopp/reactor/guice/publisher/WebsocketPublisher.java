@@ -79,7 +79,7 @@ public class WebsocketPublisher {
                             })
                             .sendString(UnicastProcessor.create());
                 })
-                .then(Mono.empty());
+                .map(s->s);
     }
 
     public Mono<Object> sendMessage5(HttpServerRequest request,

@@ -33,7 +33,8 @@ public class ApiGatewayServer {
                 binder -> Names.bindProperties(binder, properties),
                 new Module()
             )
-            .setApiGatewayDispatcher(new MyApiGatewayDispatcher())
+            .addResource("/", "/public/")
+            // .setApiGatewayDispatcher(new MyApiGatewayDispatcher())
             .basePackages("com.doopp.reactor.guice.test")
             .addFilter("/", TestFilter.class)
             .printError(true)

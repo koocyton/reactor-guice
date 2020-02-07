@@ -16,16 +16,15 @@ public class WebsocketHandle extends AbstractWebSocketServerHandle {
 
     @Override
     public Mono<Void> onTextMessage(TextWebSocketFrame frame, Channel channel) {
-        return this.sendTextMessage(frame.text(), channel);
+        for(int ii=0; ii<10; ii++) {
+            this.sendTextMessage(frame.text(), channel);
+        }
+        return Mono.empty();
     }
 
     @Override
     public Mono<Void> onConnect(Channel channel) {
-        return Flux.interval(Duration.ofMillis(1000))
-                .map(Object::toString)
-                .flatMap(s -> {
-                    return this.sendTextMessage(s, channel);
-                })
-                .then(super.onConnect(channel));
+        // Flux.interval(Duration.ofMillis(1000))
+        return super.onConnect(channel);
     }
 }
