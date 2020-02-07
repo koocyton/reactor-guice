@@ -13,14 +13,13 @@ import io.netty.handler.codec.http.websocketx.*;
 import reactor.core.publisher.FluxProcessor;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.ReplayProcessor;
-import reactor.netty.NettyPipeline;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.http.server.HttpServerResponse;
 
 import java.net.URL;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ApiGatewayPublisher {
 
@@ -125,9 +124,9 @@ public class ApiGatewayPublisher {
 
     private class GatewayWsHandle extends AbstractWebSocketServerHandle {
 
-        private Map<String, HttpClient.WebsocketSender> clients = new HashMap<>();
+        private Map<String, HttpClient.WebsocketSender> clients = new ConcurrentHashMap<>();
 
-        private Map<String, FluxProcessor<WebSocketFrame, WebSocketFrame>> messages = new HashMap<>();
+        private Map<String, FluxProcessor<WebSocketFrame, WebSocketFrame>> messages = new ConcurrentHashMap<>();
 
         @Override
         public Mono<Void> onConnect(Channel channel) {
@@ -157,12 +156,14 @@ public class ApiGatewayPublisher {
                         if (ch.isOpen() && ch.isActive()) {
                             ch.close();
                             clients.remove(ch.id().asLongText());
+                            messages.remove(ch.id().asLongText());
                         }
                     });
                     in.aggregateFrames().receiveFrames().subscribe(frame -> {
                         if (frame instanceof CloseWebSocketFrame && ch.isOpen() && ch.isActive()) {
                             ch.close();
                             clients.remove(ch.id().asLongText());
+                            messages.remove(ch.id().asLongText());
                             return;
                         }
                         channel.writeAndFlush(frame.retain());
@@ -175,6 +176,7 @@ public class ApiGatewayPublisher {
 
         @Override
         public Mono<Void> handleEvent(WebSocketFrame frame, Channel channel) {
+            System.out.println(frame);
             String channelId = channel.id().asLongText();
             messages.get(channelId).onNext(frame.retain());
             return Mono.empty();

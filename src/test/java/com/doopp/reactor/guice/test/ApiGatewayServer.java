@@ -20,8 +20,8 @@ public class ApiGatewayServer {
     public void testApiGatewayModel() throws IOException, InterruptedException {
 
         Properties properties = new Properties();
-        properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
-        // properties.load(new FileInputStream("/Developer/Project/reactor-guice/application.properties"));
+        // properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
+        properties.load(new FileInputStream("/Users/Develop/Project/reactor-guice/application.properties"));
 
         String host = properties.getProperty("server.host", "127.0.0.1");
         int port = Integer.valueOf(properties.getProperty("server.port", "8081"));
@@ -33,10 +33,16 @@ public class ApiGatewayServer {
                 binder -> Names.bindProperties(binder, properties),
                 new Module()
             )
-            .setApiGatewayDispatcher(new MyApiGatewayDispatcher())
+            .addResource("/", "/public/")
+            // .setApiGatewayDispatcher(new MyApiGatewayDispatcher())
             .basePackages("com.doopp.reactor.guice.test")
             .addFilter("/", TestFilter.class)
             .printError(true)
             .launch();
+    }
+
+    @Test
+    public void testWebsocketServer() {
+
     }
 }

@@ -9,6 +9,6 @@ public class MyApiGatewayDispatcher implements ApiGatewayDispatcher {
         if (uri.equals("/kreactor-rr/ws")) {
             return "ws://127.0.0.1:8083/kreactor/ws";
         }
-        return "https://www.baidu.com" + uri;
+        return "https://www.google.com" + uri;
     }
 }

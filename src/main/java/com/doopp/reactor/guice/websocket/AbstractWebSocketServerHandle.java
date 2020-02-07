@@ -11,18 +11,21 @@ public abstract class AbstractWebSocketServerHandle implements WebSocketServerHa
 
     @Override
     public Mono<Void> onConnect(Channel channel) {
+        System.out.println("onConnect" + channel);
         RequestAttribute requestAttribute = channel.attr(RequestAttribute.REQUEST_ATTRIBUTE).get();
         return Mono.empty();
     }
 
     @Override
     public Mono<Void> onError(Channel channel, Throwable error) {
+        System.out.println("onError" + channel);
         channel.writeAndFlush(new TextWebSocketFrame(error.getMessage()));
         return this.onClose(null, channel);
     }
 
     @Override
     public Mono<Void> handleEvent(WebSocketFrame frame, Channel channel) {
+        System.out.println("WebSocketFrame" + frame);
         try {
             if (frame instanceof TextWebSocketFrame) {
                 return this.onTextMessage((TextWebSocketFrame) frame, channel);
@@ -44,6 +47,7 @@ public abstract class AbstractWebSocketServerHandle implements WebSocketServerHa
 
     @Override
     public Mono<Void> onClose(CloseWebSocketFrame frame, Channel channel) {
+        System.out.println("onClose" + channel);
         if (channel.isOpen() && channel.isActive()) {
             channel.close();
         }

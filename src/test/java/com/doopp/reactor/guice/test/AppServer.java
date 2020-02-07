@@ -33,7 +33,7 @@ public class AppServer {
 
         Properties properties = new Properties();
         // properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
-        properties.load(new FileInputStream("/Users/henry/IdeaProjects/reactor-guice/application.properties"));
+        properties.load(new FileInputStream("/Users/develop/Project/reactor-guice/application.properties"));
 
 
 
@@ -67,7 +67,7 @@ public class AppServer {
             // .setTemplateDelegate(new ThymeleafTemplateDelegate())
             .basePackages("com.doopp.reactor.guice.test")
             .addFilter("/", TestFilter.class)
-            .addResource("/static/", "/static-public/")
+                .addResource("/static/", "/static-public/")
             .addResource("/", "/public/")
             // .setHttps(new File(jksFilePath), jksPassword, jksSecret)
             // .setTestHttps()
@@ -207,13 +207,31 @@ public class AppServer {
 
     @Test
     public void testWebsocketClient4() throws IOException {
-        testWebsocketClient();
+        Properties properties = new Properties();
+        // properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
+        properties.load(new FileInputStream("/Users/develop/Project/reactor-guice/application.properties"));
+
+        int port = Integer.valueOf(properties.getProperty("server.port", "8081"));
+
+        HttpClient.create()
+                .port(port)
+                .wiretap(true)
+                .websocket()
+                .uri("ws://127.0.0.1:8083/kreactor/ws")
+                .handle((in, out) -> in.aggregateFrames()
+                        .receive()
+                        .asString()
+                        .map(s -> {
+                            System.out.println(s);
+                            return s;
+                        }))
+                .blockLast();
     }
 
     private static void testWebsocketClient() throws IOException {
         Properties properties = new Properties();
         // properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
-        properties.load(new FileInputStream("/Users/henry/IdeaProjects/reactor-guice/application.properties"));
+        properties.load(new FileInputStream("/Users/develop/Project/reactor-guice/application.properties"));
 
         int port = Integer.valueOf(properties.getProperty("server.port", "8081"));
 
@@ -222,8 +240,6 @@ public class AppServer {
         Flux.interval(Duration.ofMillis(1000))
             .map(Object::toString)
             .subscribe(client::onNext);
-
-        System.out.println("Receive text message ");
 
         HttpClient.create()
             // .port(port)

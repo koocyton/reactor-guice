@@ -44,6 +44,8 @@ Reactor-guice 是一个基于 Google Guice 和 Reactor-netty 的 Reactor 微服�
        修复上传文件多次后，溢出的情况，补充 FileUpload.release()
        修复非 Form POST ，错误的做了 Bytebuf.release()
 
+0.12.5 网关模式下，websocket 的线程安全处理
+
 ```
 
 ### 1. 引入 reactor-guice
@@ -53,13 +55,13 @@ Reactor-guice 是一个基于 Google Guice 和 Reactor-netty 的 Reactor 微服�
 <dependency>
     <groupId>com.doopp</groupId>
     <artifactId>reactor-guice</artifactId>
-    <version>0.12.4</version>
+    <version>0.12.5-SNAPSHOT</version>
 </dependency>
 ```
 
 #### gradle
 ```
-compile 'com.doopp:reactor-guice:0.12.4'
+compile 'com.doopp:reactor-guice:0.12.5-SNAPSHOT'
 ```
 
 ### 2. 创建应用
