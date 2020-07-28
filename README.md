@@ -46,6 +46,8 @@ Reactor-guice 是一个基于 Google Guice 和 Reactor-netty 的 Reactor 微服�
 
 0.12.5 网关模式下，websocket 的线程安全处理
 
+0.12.6 Guide 和 reactor-netty 版本更新
+
 ```
 
 ### 1. 引入 reactor-guice
@@ -55,13 +57,13 @@ Reactor-guice 是一个基于 Google Guice 和 Reactor-netty 的 Reactor 微服�
 <dependency>
     <groupId>com.doopp</groupId>
     <artifactId>reactor-guice</artifactId>
-    <version>0.12.5-SNAPSHOT</version>
+    <version>0.12.6-SNAPSHOT</version>
 </dependency>
 ```
 
 #### gradle
 ```
-compile 'com.doopp:reactor-guice:0.12.5-SNAPSHOT'
+compile 'com.doopp:reactor-guice:0.12.6-SNAPSHOT'
 ```
 
 ### 2. 创建应用
