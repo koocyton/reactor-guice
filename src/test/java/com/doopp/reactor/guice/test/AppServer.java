@@ -6,8 +6,11 @@ import com.doopp.reactor.guice.redis.RedisModule;
 import com.doopp.reactor.guice.test.proto.hello.Hello;
 import com.doopp.reactor.guice.test.util.MyGsonHttpMessageConverter;
 import com.doopp.reactor.guice.view.FreemarkTemplateDelegate;
+import com.google.inject.Provides;
+import com.google.inject.Singleton;
 import com.google.inject.TypeLiteral;
 import com.google.inject.matcher.Matcher;
+import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import com.google.inject.spi.TypeListener;
 import io.netty.buffer.ByteBuf;
@@ -85,7 +88,8 @@ public class AppServer {
                     new RedisModule() {
                         @Override
                         protected void initialize() {
-
+                            bindInstance("aaa", "aaa", null);
+                            bindInstance("bbb", "bbb", null);
                         }
                     }
             )
