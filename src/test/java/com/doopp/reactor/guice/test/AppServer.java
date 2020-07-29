@@ -1,17 +1,25 @@
 package com.doopp.reactor.guice.test;
 
 import com.doopp.reactor.guice.ReactorGuiceServer;
+import com.doopp.reactor.guice.db.HikariDataSourceProvider;
+import com.doopp.reactor.guice.redis.RedisModule;
 import com.doopp.reactor.guice.test.proto.hello.Hello;
 import com.doopp.reactor.guice.test.util.MyGsonHttpMessageConverter;
 import com.doopp.reactor.guice.view.FreemarkTemplateDelegate;
+import com.google.inject.TypeLiteral;
+import com.google.inject.matcher.Matcher;
 import com.google.inject.name.Names;
+import com.google.inject.spi.TypeListener;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.util.CharsetUtil;
+import org.apache.ibatis.transaction.jdbc.JdbcTransactionFactory;
 import org.junit.Test;
+import org.mybatis.guice.MyBatisModule;
+import org.mybatis.guice.datasource.helper.JdbcHelper;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxProcessor;
 import reactor.core.publisher.Mono;
@@ -58,8 +66,28 @@ public class AppServer {
         ReactorGuiceServer.create()
             .bind(host, port, sslPort)
             .createInjector(
-                binder -> Names.bindProperties(binder, properties),
-                new Module()
+
+                    binder -> Names.bindProperties(binder, properties),
+
+                    new Module(),
+
+                    new MyBatisModule() {
+                        @Override
+                        protected void initialize() {
+                            install(JdbcHelper.MySQL);
+                            bindDataSourceProviderType(HikariDataSourceProvider.class);
+                            bindTransactionFactoryType(JdbcTransactionFactory.class);
+                            addMapperClasses("com.doopp.gauss.app.dao");
+                            // addInterceptorClass(PageInterceptor.class);
+                        }
+                    },
+
+                    new RedisModule() {
+                        @Override
+                        protected void initialize() {
+
+                        }
+                    }
             )
             // .setHttpMessageConverter(new MyJacksonHttpMessageConverter())
             .setHttpMessageConverter(new MyGsonHttpMessageConverter())

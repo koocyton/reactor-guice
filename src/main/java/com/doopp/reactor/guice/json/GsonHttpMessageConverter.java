@@ -1,5 +1,6 @@
 package com.doopp.reactor.guice.json;
 
+import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.LongSerializationPolicy;
@@ -10,7 +11,8 @@ public class GsonHttpMessageConverter implements HttpMessageConverter {
 
     public GsonHttpMessageConverter() {
         this.gson = new GsonBuilder()
-            .serializeNulls()
+            .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
+            // .serializeNulls()
             .setDateFormat("yyyy-MM-dd HH:mm:ss")
             .setLongSerializationPolicy(LongSerializationPolicy.STRING)
             .create();
