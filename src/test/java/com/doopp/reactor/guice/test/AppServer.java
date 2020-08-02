@@ -2,10 +2,12 @@ package com.doopp.reactor.guice.test;
 
 import com.doopp.reactor.guice.ReactorGuiceServer;
 import com.doopp.reactor.guice.db.HikariDataSourceProvider;
+import com.doopp.reactor.guice.redis.JedisPoolConfigProvider;
 import com.doopp.reactor.guice.redis.RedisModule;
 import com.doopp.reactor.guice.test.proto.hello.Hello;
 import com.doopp.reactor.guice.test.util.MyGsonHttpMessageConverter;
 import com.doopp.reactor.guice.view.FreemarkTemplateDelegate;
+import com.google.inject.Inject;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.TypeLiteral;
@@ -43,8 +45,8 @@ public class AppServer {
     public void testServer() throws IOException, InterruptedException {
 
         Properties properties = new Properties();
-        // properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
-        properties.load(new FileInputStream("/Users/develop/Project/reactor-guice/application.properties"));
+        properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
+        // properties.load(new FileInputStream("/Users/develop/Project/reactor-guice/application.properties"));
 
 
 
@@ -86,10 +88,15 @@ public class AppServer {
                     },
 
                     new RedisModule() {
+
+                        @Inject
+                        @Named("redis.user.token.servers")
+                        private String tokenServers;
+
                         @Override
                         protected void initialize() {
-                            bindInstance("aaa", "aaa", null);
-                            bindInstance("bbb", "bbb", null);
+                            bindJedisPoolConfigProviderType(JedisPoolConfigProvider.class);
+                            bindShardedJedis("userInfoRedis", tokenServers);
                         }
                     }
             )
