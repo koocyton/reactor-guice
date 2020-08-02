@@ -33,8 +33,8 @@ public class WebsocketPublisher {
                                             connect -> {
                                                 // channel
                                                 Channel channel = connect.channel();
-                                                System.out.println("\n\n >>>" + in);
-                                                System.out.println(channel);
+                                                // System.out.println("\n\n >>>" + in);
+                                                // System.out.println(channel);
                                                 // on disconnect
                                                 connect.onDispose().subscribe(null, null, () -> {
                                                     // System.out.println(handleObject);
@@ -79,7 +79,7 @@ public class WebsocketPublisher {
                             })
                             .sendString(UnicastProcessor.create());
                 })
-                .map(s->s);
+                .then(Mono.empty());
     }
 
     public Mono<Object> sendMessage5(HttpServerRequest request,

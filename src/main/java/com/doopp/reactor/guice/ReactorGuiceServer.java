@@ -45,7 +45,7 @@ public class ReactorGuiceServer {
 
     private int sslPort = 8084;
 
-    final private String version = "0.12.6";
+    final private String version = "0.12.7-SNAPSHOT";
 
     // handle
     private HandlePublisher handlePublisher = new HandlePublisher();
@@ -278,7 +278,7 @@ public class ReactorGuiceServer {
                 // if websocket
                 if (AbstractWebSocketServerHandle.class.isAssignableFrom(handleClass) && pathAnnotation != null) {
                     handleObject = injector.getInstance(handleClass);
-                    System.out.println("    WS " + rootPath + " → " + className);
+                    System.out.println("    WS " + rootPath + " -> " + className);
                     routes.get(rootPath, (req, resp) -> httpPublisher(req, resp, null, o ->
                             websocketPublisher.sendMessage(req, resp, (WebSocketServerHandle) handleObject, o)
                     ));
@@ -298,28 +298,28 @@ public class ReactorGuiceServer {
                         String requestPath = rootPath + method.getAnnotation(Path.class).value();
                         // GET
                         if (method.isAnnotationPresent(GET.class)) {
-                            System.out.println("   GET " + requestPath + " → " + className + ":" + method.getName());
+                            System.out.println("   GET " + requestPath + " -> " + className + ":" + method.getName());
                             routes.get(requestPath, (req, resp) -> httpPublisher(req, resp, method, o ->
                                 handlePublisher.sendResult(req, resp, method, handleObject, o)
                             ));
                         }
                         // POST
                         else if (method.isAnnotationPresent(POST.class)) {
-                            System.out.println("  POST " + requestPath + " → " + className + ":" + method.getName());
+                            System.out.println("  POST " + requestPath + " -> " + className + ":" + method.getName());
                             routes.post(requestPath, (req, resp) -> httpPublisher(req, resp, method, o ->
                                 handlePublisher.sendResult(req, resp, method, handleObject, o)
                             ));
                         }
                         // DELETE
                         else if (method.isAnnotationPresent(DELETE.class)) {
-                            System.out.println("DELETE " + requestPath + " → " + className + ":" + method.getName());
+                            System.out.println("DELETE " + requestPath + " -> " + className + ":" + method.getName());
                             routes.delete(requestPath, (req, resp) -> httpPublisher(req, resp, method, o ->
                                 handlePublisher.sendResult(req, resp, method, handleObject, o)
                             ));
                         }
                         // UPDATE
                         else if (method.isAnnotationPresent(PUT.class)) {
-                            System.out.println("   PUT " + requestPath + " → " + className + ":" + method.getName());
+                            System.out.println("   PUT " + requestPath + " -> " + className + ":" + method.getName());
                             routes.put(requestPath, (req, resp) -> httpPublisher(req, resp, method, o ->
                                 handlePublisher.sendResult(req, resp, method, handleObject, o)
                             ));
@@ -335,14 +335,14 @@ public class ReactorGuiceServer {
             // is is api gateway server
             if (this.apiGatewayDispatcher!=null) {
                 ApiGatewayPublisher apiGatewayPublisher = new ApiGatewayPublisher(this.apiGatewayDispatcher);
-                System.out.println("   Any /** →  /** <api gateway model>");
+                System.out.println("   Any /** ->  /** <api gateway model>");
                 routes.route(apiGatewayPublisher::checkRequest, (req, resp) -> httpPublisher(req, resp, null, o ->
                     apiGatewayPublisher.sendResponse(req, resp, websocketPublisher, o)
                 ));
             }
             // static server
             else {
-                System.out.println("   GET /** →  /public/* <static files>");
+                System.out.println("   GET /** ->  /public/* <static files>");
                 routes.route(req->true, (req, resp) -> httpPublisher(req, resp, null, o ->
                     staticFilePublisher.sendFile(req, resp)
                 ));
