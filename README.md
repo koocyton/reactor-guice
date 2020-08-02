@@ -96,7 +96,16 @@ public static void main(String[] args) throws IOException {
                             }
                         },
                         // Redis    
-                        new RedisModule(),
+                        new RedisModule() {
+    
+                            @Singleton
+                            @Provides
+                            @Named("userRedis")
+                            public ShardedJedisHelper userRedis(JedisPoolConfig jedisPoolConfig,
+                                                                @Named("redis.user.servers") String userServers) {
+                                return new ShardedJedisHelper(userServers, jedisPoolConfig);
+                            }
+                        }
                         // 自定义的配置
                         new ApplicationModule()
                 )
