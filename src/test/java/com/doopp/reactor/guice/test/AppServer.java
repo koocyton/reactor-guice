@@ -4,6 +4,7 @@ import com.doopp.reactor.guice.ReactorGuiceServer;
 import com.doopp.reactor.guice.db.HikariDataSourceProvider;
 import com.doopp.reactor.guice.redis.JedisPoolConfigProvider;
 import com.doopp.reactor.guice.redis.RedisModule;
+import com.doopp.reactor.guice.redis.ShardedJedisHelper;
 import com.doopp.reactor.guice.test.proto.hello.Hello;
 import com.doopp.reactor.guice.test.util.MyGsonHttpMessageConverter;
 import com.doopp.reactor.guice.view.FreemarkTemplateDelegate;
@@ -31,6 +32,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.ReplayProcessor;
 import reactor.netty.NettyPipeline;
 import reactor.netty.http.client.HttpClient;
+import redis.clients.jedis.JedisPoolConfig;
 
 import javax.ws.rs.core.MediaType;
 import java.io.File;
@@ -76,27 +78,25 @@ public class AppServer {
 
                     new Module(),
 
-                    new MyBatisModule() {
-                        @Override
-                        protected void initialize() {
-                            install(JdbcHelper.MySQL);
-                            bindDataSourceProviderType(HikariDataSourceProvider.class);
-                            bindTransactionFactoryType(JdbcTransactionFactory.class);
-                            addMapperClasses("com.doopp.gauss.app.dao");
-                            // addInterceptorClass(PageInterceptor.class);
-                        }
-                    },
+//                    new MyBatisModule() {
+//                        @Override
+//                        protected void initialize() {
+//                            install(JdbcHelper.MySQL);
+//                            bindDataSourceProviderType(HikariDataSourceProvider.class);
+//                            bindTransactionFactoryType(JdbcTransactionFactory.class);
+//                            addMapperClasses("com.doopp.gauss.app.dao");
+//                            // addInterceptorClass(PageInterceptor.class);
+//                        }
+//                    },
 
                     new RedisModule() {
 
-                        @Inject
-                        @Named("redis.user.token.servers")
-                        private String tokenServers;
-
-                        @Override
-                        protected void initialize() {
-                            bindJedisPoolConfigProviderType(JedisPoolConfigProvider.class);
-                            bindShardedJedis("userInfoRedis", tokenServers);
+                        @Singleton
+                        @Provides
+                        @Named("userRedis")
+                        public ShardedJedisHelper userRedis(JedisPoolConfig jedisPoolConfig,
+                                                            @Named("redis.user.servers") String userServers) {
+                            return new ShardedJedisHelper(userServers, jedisPoolConfig);
                         }
                     }
             )

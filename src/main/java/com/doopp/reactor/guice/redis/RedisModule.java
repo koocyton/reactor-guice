@@ -2,14 +2,12 @@ package com.doopp.reactor.guice.redis;
 
 import com.google.inject.*;
 import com.google.inject.name.Named;
-import com.google.inject.name.Names;
 import redis.clients.jedis.JedisPoolConfig;
 
 public abstract class RedisModule extends AbstractModule {
 
     @Override
     protected final void configure() {
-        this.initialize();
     }
 
     @Singleton
@@ -30,13 +28,4 @@ public abstract class RedisModule extends AbstractModule {
         config.setTestOnBorrow(testOnBorrow); // 当调用borrow Object方法时，是否进行有效性检查
         return config;
     }
-
-    protected void bindShardedJedis(String name, String redisServers, JedisPoolConfig jedisPoolConfig) {
-        this.bind(ShardedJedisHelper.class)
-                .annotatedWith(Names.named(name))
-                .toInstance(new ShardedJedisHelper(redisServers, jedisPoolConfigProvider.get()));
-        // bind(DataSource.class).toProvider(dataSourceProviderType).in(Scopes.SINGLETON);
-    }
-
-    protected abstract void initialize();
 }

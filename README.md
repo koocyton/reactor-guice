@@ -48,6 +48,8 @@ Reactor-guice 是一个基于 Google Guice 和 Reactor-netty 的 Reactor 微服�
 
 0.12.6 Guide 和 reactor-netty 版本更新
 
+0.12.7 删除长连接不必要的 log
+       增加 RedisModule
 ```
 
 ### 1. 引入 reactor-guice
@@ -57,13 +59,13 @@ Reactor-guice 是一个基于 Google Guice 和 Reactor-netty 的 Reactor 微服�
 <dependency>
     <groupId>com.doopp</groupId>
     <artifactId>reactor-guice</artifactId>
-    <version>0.12.6-SNAPSHOT</version>
+    <version>0.12.7-SNAPSHOT</version>
 </dependency>
 ```
 
 #### gradle
 ```
-compile 'com.doopp:reactor-guice:0.12.6-SNAPSHOT'
+compile 'com.doopp:reactor-guice:0.12.7-SNAPSHOT'
 ```
 
 ### 2. 创建应用
