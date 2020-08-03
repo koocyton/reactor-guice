@@ -61,13 +61,13 @@ Reactor-guice 是一个基于 Google Guice 和 Reactor-netty 的 Reactor 微服�
 <dependency>
     <groupId>com.doopp</groupId>
     <artifactId>reactor-guice</artifactId>
-    <version>0.12.8-SNAPSHOT</version>
+    <version>0.12.8</version>
 </dependency>
 ```
 
 #### gradle
 ```
-compile 'com.doopp:reactor-guice:0.12.8-SNAPSHOT'
+compile 'com.doopp:reactor-guice:0.12.8'
 ```
 
 ### 2. 创建应用

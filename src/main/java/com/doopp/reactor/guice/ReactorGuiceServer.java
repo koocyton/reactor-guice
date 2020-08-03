@@ -45,7 +45,7 @@ public class ReactorGuiceServer {
 
     private int sslPort = 8084;
 
-    final private String version = "0.12.8-SNAPSHOT";
+    final private String version = "0.12.8";
 
     // handle
     private HandlePublisher handlePublisher = new HandlePublisher();
