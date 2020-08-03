@@ -236,11 +236,11 @@ public class HandlePublisher {
             // BeanParam
             else if (parameter.getAnnotation(BeanParam.class) != null) {
                 // if json request
-                if (requestContentType.equals(MediaType.APPLICATION_JSON)) {
+                if (requestContentType.contains(MediaType.APPLICATION_JSON)) {
                     objectList.add(jsonBeanParam(content, parameterClazz));
                 }
                 // if protobuf request
-                else if (requestContentType.equals(APPLICATION_PROTO)) {
+                else if (requestContentType.contains(APPLICATION_PROTO)) {
                     objectList.add(protobufBeanParam(content, parameterClazz));
                 }
                 // default is form request

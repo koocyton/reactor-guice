@@ -50,6 +50,8 @@ Reactor-guice 是一个基于 Google Guice 和 Reactor-netty 的 Reactor 微服�
 
 0.12.7 删除长连接不必要的 log
        增加 RedisModule
+
+0.12.8 修复 JSON 传递的 BUG
 ```
 
 ### 1. 引入 reactor-guice
@@ -59,13 +61,13 @@ Reactor-guice 是一个基于 Google Guice 和 Reactor-netty 的 Reactor 微服�
 <dependency>
     <groupId>com.doopp</groupId>
     <artifactId>reactor-guice</artifactId>
-    <version>0.12.7</version>
+    <version>0.12.8-SNAPSHOT</version>
 </dependency>
 ```
 
 #### gradle
 ```
-compile 'com.doopp:reactor-guice:0.12.7'
+compile 'com.doopp:reactor-guice:0.12.8-SNAPSHOT'
 ```
 
 ### 2. 创建应用
