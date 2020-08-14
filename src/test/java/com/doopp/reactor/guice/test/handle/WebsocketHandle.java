@@ -15,7 +15,6 @@ public class WebsocketHandle extends AbstractWebSocketServerHandle {
 
     @Override
     public String secWebSocketProtocol(HttpServerRequest request) {
-        System.out.println(request.requestHeaders());
         return "User-Token";
     }
 

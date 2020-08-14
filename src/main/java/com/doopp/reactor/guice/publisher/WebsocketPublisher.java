@@ -9,8 +9,10 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.UnicastProcessor;
 import reactor.core.scheduler.Schedulers;
+import reactor.netty.http.server.HttpServer;
 import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.http.server.HttpServerResponse;
+import reactor.netty.http.server.WebsocketServerSpec;
 
 import java.util.regex.Pattern;
 
@@ -66,12 +68,12 @@ public class WebsocketPublisher {
     }
 
     public Mono<Object> sendMessage(HttpServerRequest request, HttpServerResponse response, WebSocketServerHandle handleObject, Object requestAttributeObject) {
+        WebsocketServerSpec spec = WebsocketServerSpec.builder().build();
         String secWebSocketProtocol = handleObject.secWebSocketProtocol(request);
         if (secWebSocketProtocol!=null && !secWebSocketProtocol.equals("")) {
             String[] requestedSubprotocolArray = PATTERN.split(secWebSocketProtocol);
-            System.out.println(requestedSubprotocolArray[0]);
-            response = response
-                    .addHeader("Sec-WebSocket-Protocol", requestedSubprotocolArray[0]);
+            secWebSocketProtocol = requestedSubprotocolArray[0];
+            spec = WebsocketServerSpec.builder().protocols(secWebSocketProtocol).build();
         }
         // return
         return response.addHeader("content-type", "text/plain")
@@ -90,7 +92,7 @@ public class WebsocketPublisher {
                                 );
                             })
                             .sendString(UnicastProcessor.create());
-                })
+                }, spec)
                 .then(Mono.empty());
     }
 

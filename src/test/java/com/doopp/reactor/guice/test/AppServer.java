@@ -32,6 +32,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.ReplayProcessor;
 import reactor.netty.NettyPipeline;
 import reactor.netty.http.client.HttpClient;
+import reactor.netty.http.client.WebsocketClientSpec;
 import redis.clients.jedis.JedisPoolConfig;
 
 import javax.ws.rs.core.MediaType;
@@ -283,30 +284,28 @@ public class AppServer {
         HttpClient.create()
             // .port(port)
             // .wiretap(true)
-            .headers(h->{
-                h.add("sec-webSocket-protocol", "User-Token");
-            })
-            .websocket()
+            // .headers(h->{
+            //     h.add("sec-webSocket-protocol", "User-Token");
+            // })
+            .websocket(WebsocketClientSpec.builder().protocols("User-Token").build())
             .uri("ws://127.0.0.1:8083/kreactor/ws")
-            .handle((in, out) ->
-                out.withConnection(conn -> {
-                    System.out.println(in.headers());
-                    in.aggregateFrames().receiveFrames().map(frames -> {
-                        if (frames instanceof TextWebSocketFrame) {
-                            System.out.println("Receive text message " + ((TextWebSocketFrame) frames).text());
-                        }
-                        else if (frames instanceof BinaryWebSocketFrame) {
-                            System.out.println("Receive binary message " + frames.content());
-                        }
-                        else {
-                            System.out.println("Receive normal message " + frames.content());
-                        }
-                        return Mono.empty();
-                    })
-                        .subscribe();
-                })
-                    // .options(NettyPipeline.SendOptions::flushOnEach)
-                    .sendString(client)
+            .handle((in, out) -> {
+                        return out.withConnection(conn -> {
+                            in.aggregateFrames().receiveFrames().map(frames -> {
+                                if (frames instanceof TextWebSocketFrame) {
+                                    System.out.println("Receive text message " + ((TextWebSocketFrame) frames).text());
+                                } else if (frames instanceof BinaryWebSocketFrame) {
+                                    System.out.println("Receive binary message " + frames.content());
+                                } else {
+                                    System.out.println("Receive normal message " + frames.content());
+                                }
+                                return Mono.empty();
+                            })
+                                    .subscribe();
+                        })
+                                // .options(NettyPipeline.SendOptions::flushOnEach)
+                                .sendString(client);
+                    }
             )
             .blockLast();
     }
