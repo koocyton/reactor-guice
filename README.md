@@ -52,6 +52,9 @@ Reactor-guice 是一个基于 Google Guice 和 Reactor-netty 的 Reactor 微服�
        增加 RedisModule
 
 0.12.8 修复 JSON 传递的 BUG
+
+0.12.9 WebSocket 增加支持 SecWebsocketPotocol
+
 ```
 
 ### 1. 引入 reactor-guice

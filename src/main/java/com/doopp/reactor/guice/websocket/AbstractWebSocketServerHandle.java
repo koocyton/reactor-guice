@@ -6,8 +6,14 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http.websocketx.*;
 import reactor.core.publisher.Mono;
+import reactor.netty.http.server.HttpServerRequest;
 
 public abstract class AbstractWebSocketServerHandle implements WebSocketServerHandle {
+
+    @Override
+    public String secWebSocketProtocol(HttpServerRequest request) {
+        return null;
+    }
 
     @Override
     public Mono<Void> onConnect(Channel channel) {

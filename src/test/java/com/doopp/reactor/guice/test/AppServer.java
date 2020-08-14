@@ -269,8 +269,8 @@ public class AppServer {
 
     private static void testWebsocketClient() throws IOException {
         Properties properties = new Properties();
-        // properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
-        properties.load(new FileInputStream("/Users/develop/Project/reactor-guice/application.properties"));
+        properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
+        // properties.load(new FileInputStream("/Users/develop/Project/reactor-guice/application.properties"));
 
         int port = Integer.valueOf(properties.getProperty("server.port", "8081"));
 
@@ -283,10 +283,14 @@ public class AppServer {
         HttpClient.create()
             // .port(port)
             // .wiretap(true)
+            .headers(h->{
+                h.add("sec-webSocket-protocol", "User-Token");
+            })
             .websocket()
             .uri("ws://127.0.0.1:8083/kreactor/ws")
             .handle((in, out) ->
                 out.withConnection(conn -> {
+                    System.out.println(in.headers());
                     in.aggregateFrames().receiveFrames().map(frames -> {
                         if (frames instanceof TextWebSocketFrame) {
                             System.out.println("Receive text message " + ((TextWebSocketFrame) frames).text());

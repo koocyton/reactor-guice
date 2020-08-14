@@ -12,9 +12,14 @@ import reactor.core.scheduler.Schedulers;
 import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.http.server.HttpServerResponse;
 
+import java.util.regex.Pattern;
+
 public class WebsocketPublisher {
 
     private static final Logger log = LoggerFactory.getLogger(WebsocketPublisher.class);
+
+
+    private static final Pattern PATTERN = Pattern.compile("\\s*,\\s*");
 
     // the out put
     private static Flux<Object> rp = UnicastProcessor.create();
@@ -61,8 +66,15 @@ public class WebsocketPublisher {
     }
 
     public Mono<Object> sendMessage(HttpServerRequest request, HttpServerResponse response, WebSocketServerHandle handleObject, Object requestAttributeObject) {
+        String secWebSocketProtocol = handleObject.secWebSocketProtocol(request);
+        if (secWebSocketProtocol!=null && !secWebSocketProtocol.equals("")) {
+            String[] requestedSubprotocolArray = PATTERN.split(secWebSocketProtocol);
+            System.out.println(requestedSubprotocolArray[0]);
+            response = response
+                    .addHeader("Sec-WebSocket-Protocol", requestedSubprotocolArray[0]);
+        }
         // return
-        return response.header("content-type", "text/plain")
+        return response.addHeader("content-type", "text/plain")
                 .sendWebsocket((in, out) -> {
                     // return
                     return out.withConnection(
