@@ -111,6 +111,9 @@ public class AppServer {
             .addResource("/", "/public/")
             // .setHttps(new File(jksFilePath), jksPassword, jksSecret)
             // .setTestHttps()
+            //.execute(injector -> {
+                // System.out.println(injector);
+            // })
             .printError(true)
             // .crossOrigin(true)
             .launch();

@@ -55,6 +55,8 @@ Reactor-guice 是一个基于 Google Guice 和 Reactor-netty 的 Reactor 微服�
 
 0.12.9 WebSocket 增加支持 SecWebsocketPotocol
 
+0.12.10 增加接口，用于初始化后立刻可用 injector
+
 ```
 
 ### 1. 引入 reactor-guice

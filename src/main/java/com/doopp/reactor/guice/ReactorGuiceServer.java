@@ -34,8 +34,12 @@ import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.security.KeyStore;
 import java.util.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 public class ReactorGuiceServer {
 
@@ -45,7 +49,7 @@ public class ReactorGuiceServer {
 
     private int sslPort = 8084;
 
-    final private String version = "0.12.9";
+    final private String version = "0.12.10";
 
     // handle
     private HandlePublisher handlePublisher = new HandlePublisher();
@@ -74,6 +78,8 @@ public class ReactorGuiceServer {
     private final Set<Module> modules = new HashSet<>();
 
     static final Set<String> classNames = new HashSet<>();
+
+    private ScheduledExecutorService newScheduledThreadPool = null;
 
     private SslContext sslContext = null;
 
@@ -191,12 +197,25 @@ public class ReactorGuiceServer {
         return this;
     }
 
+    private final List<Consumer<Injector>> afterConsumerList = new ArrayList<>();
+
+    public ReactorGuiceServer createInjectorAfter(Consumer<Injector> injectorConsumer) {
+        afterConsumerList.add(injectorConsumer);
+        return this;
+    }
+
     public void launch() {
 
         // 如果 injector 没有设定，就使用自动扫描的注入
         if (this.injector==null) {
             modules.add(new AutoImportModule());
             this.injector = Guice.createInjector(modules);
+        }
+
+        if (afterConsumerList.size()>0) {
+            afterConsumerList.forEach(injectorConsumer -> {
+                injectorConsumer.accept(this.injector);
+            });
         }
 
         Consumer<HttpServerRoutes> httpServerRoutesConsumer = this.routesBuilder();

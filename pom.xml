@@ -6,7 +6,7 @@
 
     <groupId>com.doopp</groupId>
     <artifactId>reactor-guice</artifactId>
-    <version>0.12.9</version>
+    <version>0.12.10</version>
     <description>Guice reactor-netty Components</description>
     <name>reactor-guice</name>
     <url>https://github.com/koocyton/reactor-guice</url>
@@ -84,7 +84,7 @@
         <dependency>
             <groupId>io.projectreactor.netty</groupId>
             <artifactId>reactor-netty</artifactId>
-            <version>0.9.10.RELEASE</version>
+            <version>0.9.11.RELEASE</version>
         </dependency>
 
         <!-- rs -->
