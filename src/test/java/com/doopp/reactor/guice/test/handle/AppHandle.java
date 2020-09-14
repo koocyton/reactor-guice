@@ -108,7 +108,7 @@ public class AppHandle {
 
     @POST
     @Path("/test/post-bean")
-    public Mono<User> testPostBean(@BeanParam User user, @FileParam(value="image", path = "/tmp/bb") File[] files) {
+    public Mono<User> testPostBean(User user, @FileParam(value="image", path = "/tmp/bb") File[] files) {
         // System.out.println(files[0].getPath());
         return Mono.just(user);
     }
@@ -116,13 +116,13 @@ public class AppHandle {
     @POST
     @Path("/test/json-bean")
     @Produces(MediaType.APPLICATION_JSON)
-    public Mono<User> testJsonBean(@BeanParam User user) {
+    public Mono<User> testJsonBean(User user) {
         return Mono.just(user);
     }
 
     @POST
     @Path("/test/proto-post-bean")
-    public Mono<Hello> testPostBean(@BeanParam Hello hello) {
+    public Mono<Hello> testPostBean(Hello hello) {
         return Mono.just(hello);
     }
 }

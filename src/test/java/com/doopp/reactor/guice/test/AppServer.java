@@ -48,8 +48,8 @@ public class AppServer {
     public void testServer() throws IOException, InterruptedException {
 
         Properties properties = new Properties();
-        properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
-        // properties.load(new FileInputStream("/Users/develop/Project/reactor-guice/application.properties"));
+        // properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
+        properties.load(new FileInputStream("/Users/develop/Project/reactor-guice/application.properties"));
 
 
 
@@ -151,7 +151,7 @@ public class AppServer {
 
         ByteBuf buf = Unpooled.wrappedBuffer(builder.build().toByteArray()).retain();
 
-        for(int ii=0; ii<100000; ii++) {
+        for(int ii=0; ii<10; ii++) {
             String hhe = HttpClient.create()
                 .headers(headers -> {
                     headers.add(HttpHeaderNames.CONTENT_TYPE, "application/x-protobuf");
@@ -171,7 +171,7 @@ public class AppServer {
     @Test
     public void testPostJsonBean() {
 
-        for(int ii=0; ii<100000; ii++) {
+        for(int ii=0; ii<100; ii++) {
             ByteBuf buf = Unpooled.wrappedBuffer("{\"id\":\"123123121312312\", \"name\":\"wuyi\"}".getBytes()).retain();
 
             String hhe = HttpClient.create()
@@ -191,7 +191,7 @@ public class AppServer {
 
     @Test
     public void testPostFormBean() {
-        for (int ii=0; ii<100000; ii++) {
+        for (int ii=0; ii<10; ii++) {
             String hhe = HttpClient.create()
                 .post()
                 .uri("http://127.0.0.1:8083/kreactor/test/post-bean")
