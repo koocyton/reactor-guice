@@ -57,6 +57,8 @@ Reactor-guice 是一个基于 Google Guice 和 Reactor-netty 的 Reactor 微服�
 
 0.12.10 增加接口，用于初始化后立刻可用 injector
 
+0.12.11 去掉使用 BeanParam (错误的理解)
+
 ```
 
 ### 1. 引入 reactor-guice
@@ -66,13 +68,13 @@ Reactor-guice 是一个基于 Google Guice 和 Reactor-netty 的 Reactor 微服�
 <dependency>
     <groupId>com.doopp</groupId>
     <artifactId>reactor-guice</artifactId>
-    <version>0.12.8</version>
+    <version>0.12.11</version>
 </dependency>
 ```
 
 #### gradle
 ```
-compile 'com.doopp:reactor-guice:0.12.8'
+compile 'com.doopp:reactor-guice:0.12.11'
 ```
 
 ### 2. 创建应用
@@ -223,7 +225,7 @@ ReactorGuiceServer.create()
 // Server
 @POST
 @Path("/test/post-bean")
-public Mono<User> testPostBean(@BeanParam User user, @FileParam(value="image", path = "C:\\Users\\koocyton\\Desktop") File[] file) {
+public Mono<User> testPostBean(User user, @FileParam(value="image", path = "C:\\Users\\koocyton\\Desktop") File[] file) {
     return Mono.just(user);
 }
 

@@ -234,7 +234,7 @@ public class HandlePublisher {
                 }
             }
             // BeanParam
-            else if (parameter.getAnnotation(BeanParam.class) != null) {
+            else {
                 // if json request
                 if (requestContentType.contains(MediaType.APPLICATION_JSON)) {
                     objectList.add(jsonBeanParam(content, parameterClazz));
@@ -254,9 +254,9 @@ public class HandlePublisher {
                 }
             }
             // default
-            else {
-                objectList.add(parameterClazz.cast(null));
-            }
+            // else {
+            //    objectList.add(parameterClazz.cast(null));
+            // }
         }
         return Mono.just(objectList.toArray());
     }
