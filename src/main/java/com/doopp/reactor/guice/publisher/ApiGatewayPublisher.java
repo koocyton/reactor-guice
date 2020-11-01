@@ -23,9 +23,9 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class ApiGatewayPublisher {
 
-    private ApiGatewayDispatcher apiGatewayDispatcher;
+    private final ApiGatewayDispatcher apiGatewayDispatcher;
 
-    private GatewayWsHandle gatewayWsHandle;
+    private final GatewayWsHandle gatewayWsHandle;
 
     public ApiGatewayPublisher(ApiGatewayDispatcher apiGatewayDispatcher) {
         this.apiGatewayDispatcher = apiGatewayDispatcher;
@@ -129,13 +129,13 @@ public class ApiGatewayPublisher {
         private Map<String, FluxProcessor<WebSocketFrame, WebSocketFrame>> messages = new ConcurrentHashMap<>();
 
         @Override
-        public Mono<Void> onConnect(Channel channel) {
+        public void onConnect(Channel channel) {
 
             RequestAttribute requestAttribute = channel.attr(RequestAttribute.REQUEST_ATTRIBUTE).get();
             String wsUrl = requestAttribute.getAttribute("websocket-inside-url", String.class);
 
             if (wsUrl==null) {
-                return this.onClose(null, channel);
+                return;
             }
 
             String channelId = channel.id().asLongText();
@@ -147,7 +147,7 @@ public class ApiGatewayPublisher {
                 .websocket()
                 .uri(wsUrl));
 
-            return clients.get(channelId).handle((in, out) -> out
+            clients.get(channelId).handle((in, out) -> out
                 .withConnection(con->{
                     // channel
                     Channel ch = con.channel();
@@ -171,15 +171,15 @@ public class ApiGatewayPublisher {
                 })
                 // .options(NettyPipeline.SendOptions::flushOnEach)
                 .sendObject(messages.get(channelId))
-            ).then();
+            ).subscribe(a->{
+
+            });
         }
 
         @Override
-        public Mono<Void> handleEvent(WebSocketFrame frame, Channel channel) {
-            // System.out.println(frame);
+        public void handleEvent(WebSocketFrame frame, Channel channel) {
             String channelId = channel.id().asLongText();
             messages.get(channelId).onNext(frame.retain());
-            return Mono.empty();
         }
     }
 }

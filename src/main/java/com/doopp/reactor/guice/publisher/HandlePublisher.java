@@ -20,9 +20,7 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import java.io.*;
 import java.lang.reflect.*;
-import java.nio.charset.Charset;
 import java.util.*;
-import java.util.function.Consumer;
 
 public class HandlePublisher {
 

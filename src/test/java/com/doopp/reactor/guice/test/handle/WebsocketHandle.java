@@ -4,7 +4,6 @@ import com.doopp.reactor.guice.websocket.AbstractWebSocketServerHandle;
 import com.google.inject.Singleton;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
-import reactor.core.publisher.Mono;
 import reactor.netty.http.server.HttpServerRequest;
 
 import javax.ws.rs.Path;
@@ -19,7 +18,7 @@ public class WebsocketHandle extends AbstractWebSocketServerHandle {
     }
 
     @Override
-    public Mono<Void> onTextMessage(TextWebSocketFrame frame, Channel channel) {
-        return this.sendTextMessage(frame.text(), channel);
+    public void onTextMessage(TextWebSocketFrame frame, Channel channel) {
+        this.sendTextMessage(frame.text(), channel);
     }
 }

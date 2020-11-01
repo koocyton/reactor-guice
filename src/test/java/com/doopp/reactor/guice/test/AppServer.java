@@ -1,36 +1,27 @@
 package com.doopp.reactor.guice.test;
 
 import com.doopp.reactor.guice.ReactorGuiceServer;
-import com.doopp.reactor.guice.db.HikariDataSourceProvider;
-import com.doopp.reactor.guice.redis.JedisPoolConfigProvider;
 import com.doopp.reactor.guice.redis.RedisModule;
 import com.doopp.reactor.guice.redis.ShardedJedisHelper;
 import com.doopp.reactor.guice.test.proto.hello.Hello;
+import com.doopp.reactor.guice.test.util.MyApiGatewayDispatcher;
 import com.doopp.reactor.guice.test.util.MyGsonHttpMessageConverter;
 import com.doopp.reactor.guice.view.FreemarkTemplateDelegate;
-import com.google.inject.Inject;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
-import com.google.inject.TypeLiteral;
-import com.google.inject.matcher.Matcher;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
-import com.google.inject.spi.TypeListener;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.util.CharsetUtil;
-import org.apache.ibatis.transaction.jdbc.JdbcTransactionFactory;
 import org.junit.Test;
-import org.mybatis.guice.MyBatisModule;
-import org.mybatis.guice.datasource.helper.JdbcHelper;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxProcessor;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.ReplayProcessor;
-import reactor.netty.NettyPipeline;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.client.WebsocketClientSpec;
 import redis.clients.jedis.JedisPoolConfig;
@@ -48,8 +39,8 @@ public class AppServer {
     public void testServer() throws IOException, InterruptedException {
 
         Properties properties = new Properties();
-        // properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
-        properties.load(new FileInputStream("/Users/develop/Project/reactor-guice/application.properties"));
+        properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
+        // properties.load(new FileInputStream("/Users/develop/Project/reactor-guice/application.properties"));
 
 
 
@@ -101,13 +92,14 @@ public class AppServer {
                         }
                     }
             )
+            .setApiGatewayDispatcher(new MyApiGatewayDispatcher())
             // .setHttpMessageConverter(new MyJacksonHttpMessageConverter())
             .setHttpMessageConverter(new MyGsonHttpMessageConverter())
             .setTemplateDelegate(new FreemarkTemplateDelegate())
             // .setTemplateDelegate(new ThymeleafTemplateDelegate())
             .basePackages("com.doopp.reactor.guice.test")
             .addFilter("/", TestFilter.class)
-                .addResource("/static/", "/static-public/")
+            .addResource("/static/", "/static-public/")
             .addResource("/", "/public/")
             // .setHttps(new File(jksFilePath), jksPassword, jksSecret)
             // .setTestHttps()
@@ -220,8 +212,8 @@ public class AppServer {
                     .attr("account", "liuyi")
                     .attr("password", "password")
                     .attr("name", "name")
-                    .file("image", new File("/Users/henry/Pictures/girl.jpg"))
-                    // .file("image", new File("C:\\Users\\koocyton\\Pictures\\cloud.jpg"))
+                    // .file("image", new File("/Users/henry/Pictures/girl.jpg"))
+                    .file("image", new File("C:\\Users\\koocyton\\Pictures\\cloud.jpg"))
                     // .file("image", new File("C:\\Users\\koocyton\\Pictures\\st.jpg"))
                     // .file("image", new File("C:\\Users\\koocyton\\Pictures\\zz.txt"))
                 )
@@ -251,8 +243,8 @@ public class AppServer {
     @Test
     public void testWebsocketClient4() throws IOException {
         Properties properties = new Properties();
-        // properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
-        properties.load(new FileInputStream("/Users/develop/Project/reactor-guice/application.properties"));
+        properties.load(new FileInputStream("D:\\project\\reactor-guice\\application.properties"));
+        // properties.load(new FileInputStream("/Users/develop/Project/reactor-guice/application.properties"));
 
         int port = Integer.valueOf(properties.getProperty("server.port", "8081"));
 
@@ -291,7 +283,7 @@ public class AppServer {
             //     h.add("sec-webSocket-protocol", "User-Token");
             // })
             .websocket(WebsocketClientSpec.builder().protocols("User-Token").build())
-            .uri("ws://127.0.0.1:8083/kreactor/ws")
+            .uri("ws://127.0.0.1:8083/kreactor-rr/ws")
             .handle((in, out) -> {
                         return out.withConnection(conn -> {
                             in.aggregateFrames().receiveFrames().map(frames -> {

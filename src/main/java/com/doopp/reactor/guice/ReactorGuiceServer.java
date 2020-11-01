@@ -612,7 +612,7 @@ public class ReactorGuiceServer {
             }
             return Paths.get(resource.toURI());
         })
-            .subscribeOn(Schedulers.elastic())
+            .subscribeOn(Schedulers.boundedElastic())
             .onErrorResume(t->Mono.error(new StatusMessageException(404, "Not Found")));
     }
 }
