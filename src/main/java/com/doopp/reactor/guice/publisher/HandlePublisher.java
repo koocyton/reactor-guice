@@ -237,7 +237,14 @@ public class HandlePublisher {
             else {
                 // if json request
                 if (requestContentType.contains(MediaType.APPLICATION_JSON)) {
-                    objectList.add(jsonBeanParam(content, parameterClazz));
+                    if (parameterClazz.equals(ByteBuf.class)) {
+                        byte[] byteArray = new byte[content.capacity()];
+                        content.readBytes(byteArray);
+                        objectList.add(byteArray);
+                    }
+                    else {
+                        objectList.add(jsonBeanParam(content, parameterClazz));
+                    }
                 }
                 // if protobuf request
                 else if (requestContentType.contains(APPLICATION_PROTO)) {
