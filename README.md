@@ -59,6 +59,10 @@ Reactor-guice 是一个基于 Google Guice 和 Reactor-netty 的 Reactor 微服�
 
 0.12.11 去掉使用 BeanParam (错误的理解)
 
+0.12.12 可以 PUT 一个文件到服务器，接受类型 byte[]
+
+0.14 这是我喜欢的数字，reactor-netty 跟新到 1.0
+
 ```
 
 ### 1. 引入 reactor-guice
@@ -68,13 +72,13 @@ Reactor-guice 是一个基于 Google Guice 和 Reactor-netty 的 Reactor 微服�
 <dependency>
     <groupId>com.doopp</groupId>
     <artifactId>reactor-guice</artifactId>
-    <version>0.12.11</version>
+    <version>0.14</version>
 </dependency>
 ```
 
 #### gradle
 ```
-compile 'com.doopp:reactor-guice:0.12.11'
+compile 'com.doopp:reactor-guice:0.14'
 ```
 
 ### 2. 创建应用
