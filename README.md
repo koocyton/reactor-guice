@@ -61,7 +61,9 @@ Reactor-guice 是一个基于 Google Guice 和 Reactor-netty 的 Reactor 微服�
 
 0.12.12 可以 PUT 一个文件到服务器，接受类型 byte[]
 
-0.14 这是我喜欢的数字，reactor-netty 跟新到 1.0
+0.14.1 这是我喜欢的数字，
+       reactor-netty 跟新到 1.0，
+       websocket 接口优化
 
 ```
 
@@ -72,13 +74,13 @@ Reactor-guice 是一个基于 Google Guice 和 Reactor-netty 的 Reactor 微服�
 <dependency>
     <groupId>com.doopp</groupId>
     <artifactId>reactor-guice</artifactId>
-    <version>0.14</version>
+    <version>0.14.1</version>
 </dependency>
 ```
 
 #### gradle
 ```
-compile 'com.doopp:reactor-guice:0.14'
+compile 'com.doopp:reactor-guice:0.14.1'
 ```
 
 ### 2. 创建应用
